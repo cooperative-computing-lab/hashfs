@@ -17,6 +17,16 @@ s3 = boto3.resource('s3',
 # Get file from bucket and save file in /tmp/mkfs/<fs>/
 # Returns True if successful, False if unsuccessful
 def get_file_from_s3(fs, object_name):
+    """Get file from parent and save file in /tmp/mkfs/<fs>/
+
+    Args:
+        fs          (str): name of the file system instance
+        object_name (str): name of the object
+
+    Returns:
+        bool: True for success, False for otherwise
+    """
+
     # Check if /tmp/mkfs/<fs>/ exists
     local_cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
     if not os.path.isdir(local_cache_dir):
@@ -44,6 +54,21 @@ def put_file_to_s3(fs, object_name, local_name):
 # root_node: cksum of root directories to begin search from
 # TODO: Check if node is directory when traversing
 def get_node_by_path(fs, root_node, path_list, nodes_traversed):
+    """Traverse merkle tree and fetch the node by path
+
+    Starting from the root_node, traverse the merkle tree until the node is found or
+    an error has occured
+
+    Args:
+        fs              (str) : name of the file system instance
+        root_node       (str) : the cksum of the root_node to traversed from
+        path_list       (list): the pathname list
+        nodes_traversed (list): the list to keep track of nodes traversed
+
+    Returns:
+        list: the list of nodes traversed
+        str : the cksum of the node found (None if an error occured)
+    """
     nodes_traversed.append(root_node)
     cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
     directory_file = "{}/{}".format(cache_dir, root_node)
@@ -52,7 +77,7 @@ def get_node_by_path(fs, root_node, path_list, nodes_traversed):
         return None, None
 
     # Open directory_file and traverse
-    dir_content = fetch_dir_info(fs, root_node)
+    dir_content = fetch_dir_info_from_cache(fs, root_node)
 
     sub_node = dir_content.get(path_list[0])
     if sub_node == None:
@@ -77,7 +102,17 @@ def get_node_by_path(fs, root_node, path_list, nodes_traversed):
         return nodes_traversed, None
 
 def put_file_bubble_up(fs, src_path, dest_path, nodes_traversed):
-    cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
+    """Put file into the file system and bubble up the merkle tree
+
+    Args:
+        fs              (str) : name of the file system instance
+        src_path        (str) : source of file to be placed in the file system
+        dest_path       (list): the path list to place the file at
+        nodes_traversed (list): the list to keep track of nodes traversed
+
+    Return:
+        str : returns the new root cksum
+    """
     # Directories in the path of new file that does not exist in the fs yet
     new_directories = dest_path[len(nodes_traversed)-1 : -1]
     
@@ -104,14 +139,18 @@ def put_file_bubble_up(fs, src_path, dest_path, nodes_traversed):
         curr_cksum = calculate_directory_cksum(data)
         curr_type = "directory"
 
-        cache_node_path = "{}/{}".format(cache_dir, curr_cksum)
-        with open(cache_node_path, "w+") as df:
-            json.dump(data, df)
+        cache_node_path = put_dir_info_in_cache(fs, curr_cksum, data)
         put_file_to_s3(fs, curr_cksum, cache_node_path)
 
+    # Bubble up on existing directories
+    curr_cksum = bubble_up_existing_dir(fs, nodes_traversed, curr_name, curr_cksum, curr_type, prev_cksum)
+
+    return curr_cksum
+
+def bubble_up_existing_dir(fs, nodes_traversed, curr_name, curr_cksum, curr_type, prev_cksum):
     # Bubble up and modify exisiting directories
     for existing_dir_cksum in reversed(nodes_traversed):
-        data = fetch_dir_info(fs, existing_dir_cksum)
+        data = fetch_dir_info_from_cache(fs, existing_dir_cksum)
 
         # previous node is an existing directory, needs to search dir_contents
         # for curr_name using prev_cksum
@@ -138,14 +177,20 @@ def put_file_bubble_up(fs, src_path, dest_path, nodes_traversed):
         curr_cksum = calculate_directory_cksum(data)
         curr_type = "directory"
         
-        cache_node_path = "{}/{}".format(cache_dir, curr_cksum)
-        with open(cache_node_path, "w+") as df:
-            json.dump(data, df)
+        cache_node_path = put_dir_info_in_cache(fs, curr_cksum, data)
         put_file_to_s3(fs, curr_cksum, cache_node_path)
 
     return curr_cksum
+
+def put_dir_info_in_cache(fs, cksum, data):
+    cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
+    cache_node_path = "{}/{}".format(cache_dir, cksum)
+    with open(cache_node_path, "w+") as df:
+        json.dump(data, df)
+
+    return cache_node_path
     
-def fetch_dir_info(fs, dir_cksum):
+def fetch_dir_info_from_cache(fs, dir_cksum):
     cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
     with open("{}/{}".format(cache_dir, dir_cksum), "r") as df:
         data = json.load(df)
