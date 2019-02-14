@@ -52,8 +52,8 @@ def get_node_by_path(fs, root_node, path_list, nodes_traversed):
         return None, None
 
     # Open directory_file and traverse
-    with open(directory_file, "r") as df:
-        dir_content = json.load(df)
+    dir_content = fetch_dir_info(fs, root_node)
+
     sub_node = dir_content.get(path_list[0])
     if sub_node == None:
         print("Path ends at {}".format(root_node))
@@ -68,8 +68,13 @@ def get_node_by_path(fs, root_node, path_list, nodes_traversed):
                 print("The node doesn't exisit in s3")
                 return nodes_traversed, None
         return nodes_traversed, sub_node['cksum']
-
-    return get_node_by_path(fs, sub_node['cksum'], path_list[1:], nodes_traversed)
+    
+    # Check if sub_node is directory
+    if sub_node['type'] == 'directory':
+        return get_node_by_path(fs, sub_node['cksum'], path_list[1:], nodes_traversed)
+    else:
+        print("{} is not a directory".format(path_list[0]))
+        return nodes_traversed, None
 
 def put_file_bubble_up(fs, src_path, dest_path, nodes_traversed):
     cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
@@ -106,9 +111,7 @@ def put_file_bubble_up(fs, src_path, dest_path, nodes_traversed):
 
     # Bubble up and modify exisiting directories
     for existing_dir_cksum in reversed(nodes_traversed):
-        # Fetch exisiting directory file for dir_content
-        with open("{}/{}".format(cache_dir, existing_dir_cksum), "r") as df:
-            data = json.load(df)
+        data = fetch_dir_info(fs, existing_dir_cksum)
 
         # previous node is an existing directory, needs to search dir_contents
         # for curr_name using prev_cksum
@@ -141,9 +144,13 @@ def put_file_bubble_up(fs, src_path, dest_path, nodes_traversed):
         put_file_to_s3(fs, curr_cksum, cache_node_path)
 
     return curr_cksum
+    
+def fetch_dir_info(fs, dir_cksum):
+    cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
+    with open("{}/{}".format(cache_dir, dir_cksum), "r") as df:
+        data = json.load(df)
 
-
-
+    return data
         
 def calculate_directory_cksum(dir_content):
     hasher = hashlib.sha256()
