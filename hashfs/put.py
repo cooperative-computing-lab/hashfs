@@ -1,5 +1,5 @@
 from __future__ import print_function
-import mkfs_core2 as mkfs
+import mkfs_core as mkfs
 import os
 import sys
 

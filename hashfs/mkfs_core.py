@@ -73,7 +73,8 @@ def get_node_by_path(fs, root_node, path_list, nodes_traversed):
     cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
     directory_file = "{}/{}".format(cache_dir, root_node)
 
-    if not os.path.exists(directory_file) and not get_file_from_s3(fs, root_node):
+    # Load node to cache before proceeding
+    if load_node_to_cache(fs, root_node) == False:
         return None, None
 
     # Open directory_file and traverse
@@ -147,6 +148,35 @@ def put_file_bubble_up(fs, src_path, dest_path, nodes_traversed):
 
     return curr_cksum
 
+# TODO: handle delete results in empty directories
+def delete_file_bubble_up(fs, delete_cksum, nodes_traversed):
+    # Fetch directory containing the node to be removed
+    containing_dir_cksum = nodes_traversed[-1]
+    dir_data = fetch_dir_info_from_cache(fs, containing_dir_cksum)
+
+    # Modify the directory content
+    node_name = None
+    for name, metadata in dir_data.iteritems():
+        if metadata['cksum'] == delete_cksum:
+            node_name = name
+            break
+
+    if node_name == None:
+        print("The node {} is not in the directory {}".format(cksum, nodes_traversed[-1]))
+        return 
+    
+    # Remove node for directory data
+    del dir_data[node_name]
+
+    new_cksum = calculate_directory_cksum(dir_data)
+    cache_node_path = put_dir_info_in_cache(fs, new_cksum, dir_data)
+    put_file_to_s3(fs, new_cksum, cache_node_path)
+
+    root_cksum = bubble_up_existing_dir(fs, nodes_traversed[:-1], None, new_cksum, "directory", containing_dir_cksum)
+
+    return root_cksum
+
+
 def bubble_up_existing_dir(fs, nodes_traversed, curr_name, curr_cksum, curr_type, prev_cksum):
     # Bubble up and modify exisiting directories
     for existing_dir_cksum in reversed(nodes_traversed):
@@ -181,6 +211,13 @@ def bubble_up_existing_dir(fs, nodes_traversed, curr_name, curr_cksum, curr_type
         put_file_to_s3(fs, curr_cksum, cache_node_path)
 
     return curr_cksum
+
+def load_node_to_cache(fs, cksum):
+    cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
+    if not os.path.exists("{}/{}".format(cache_dir, cksum)) and not get_file_from_s3(fs, cksum):
+        return False
+
+    return True
 
 def put_dir_info_in_cache(fs, cksum, data):
     cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
