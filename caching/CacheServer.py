@@ -2,6 +2,7 @@ from flask import Flask
 from flask import request
 import requests
 import os
+from stat import S_ISDIR
 import sys
 import json
 import CacheUtils
@@ -51,6 +52,7 @@ def makeRequestToParentCache(filename):
 
 def get(filename):
 
+    # get directory acting as cache
     try:
         cacheDir = app.config.get("cacheDir")
     except:
@@ -84,12 +86,19 @@ def formatGetResponse(statusCode, errors):
 def formatPutResponse(statusCode, errors):
     return json.dumps({"status":statusCode, "errors":str(errors)})+"\n"
 
-def put(filename, binaryData):
+def put(encryption, binaryData):
     try:
         cacheDir = app.config.get("cacheDir")
     except:
         print "Error accessing Flask config"
         return formatPutResponse(500, "Error accessing Flask config")
+
+    if encryption == "sha256":
+        # get hash of file to use as filename
+        filename = CacheUtils.calculate_binary_data_cksum(binaryData)
+    else:
+        print "Can only use sha256 as hashing algorithm"
+        return formatPutResponse(200, "Can only use sha256 as hashing algorithm")
 
     # open file and save contents to it
     try:
@@ -100,7 +109,90 @@ def put(filename, binaryData):
         print "Error saving file from PUT request: "+str(error)
         return formatPutResponse(500, error)
 
-    return formatPutResponse(200, "")
+    # check that filename matches hashed file contents
+    checksum = CacheUtils.calculate_file_cksum((cacheDir+filename))
+    if checksum != filename:
+        print "File checksum and hash filename do not match, returning checksum"
+        return checksum+"\n"
+
+    # return hashed filename
+    return filename+"\n"
+
+def push(encryption, filename):
+    if encryption != "sha256":
+        return "Can only use sha256 hashing algorithm\n"
+
+    try:
+        cacheDir = app.config.get("cacheDir")
+        address = app.config.get("parentCacheAddress")
+    except:
+        print "Error accessing Flask config"
+        return formatPutResponse(500, "Error accessing Flask config")
+
+    # check that cache has file
+    if not CacheUtils.doesFileExist(cacheDir, filename):
+        print "Error during push, no such file in cache: "+str(filename)
+        return "Error during push, no such file in cache: "+str(filename)+"\n"
+
+    # open file
+    try:
+        f = open(cacheDir+filename, "rb")
+        fileData = f.read()
+        f.close()
+    except IOError as error:
+        print "Error opening file: "+str(error)
+
+    # make put request to parent
+    try:
+        putReq = requests.put("http://"+address+"/put/"+encryption, data=fileData)
+    except requests.exceptions.RequestException as error:
+        errorMsg = "Error making PUT request to parent cache at address "+address+": "+str(error)
+        print errorMsg
+        return formatGetResponse(500, errorMsg)
+
+    # make push request to parent?
+    '''try:
+        pushRequest = requests.put("http://"+address+"/push/"+filename)
+    except requests.exceptions.RequestException as error:
+        errorMsg = "Error making GET request to parent cache at address "+address+": "+str(error)
+        print errorMsg
+        return formatGetResponse(500, errorMsg)'''
+
+    return "success\n"
+
+def info(encryption, filename):
+    if encryption != "sha256":
+        return "Can only use sha256 hashing algorithm\n"
+
+    try:
+        cacheDir = app.config.get("cacheDir")
+        address = app.config.get("parentCacheAddress")
+    except:
+        print "Error accessing Flask config"
+        return formatPutResponse(500, "Error accessing Flask config")
+
+    # get file info with os.stat()
+    try:
+        fileInfo = os.stat(cacheDir+filename)
+    except OSError as error:
+        print "Error getting file info: "+str(error)
+        return "Error getting file info: "+str(error)+"\n"
+
+    try:
+        jsonFileInfo = {}
+        if S_ISDIR(fileInfo.st_mode):
+            jsonFileInfo["is_dir"] = True
+        else:
+            jsonFileInfo["is_dir"] = False
+
+        jsonFileInfo["size"] = fileInfo.st_size
+        jsonFileInfo["atime"] = fileInfo.st_atime
+        jsonFileInfo["mtime"] = fileInfo.st_mtime
+    except:
+        print "Error constructing json file info"
+        return "Error constructing json file info\n"
+
+    return json.dumps(jsonFileInfo)+"\n"
 
 # Get file endpoint
 @app.route("/get/<filename>", methods=['GET'])
@@ -108,15 +200,24 @@ def getFileEndpoint(filename):
     return get(filename)
 
 # Put file endpoint
-@app.route("/put/<filename>", methods=['PUT'])
-def putFileEndpoint(filename):
+@app.route("/put/<encryption>", methods=['PUT'])
+def putFileEndpoint(encryption):
     try:
         binaryData = request.get_data()
     except:
         print "Error getting data from PUT request"
         return formatPutResponse(500, "")
+    return put(encryption, binaryData)
 
-    return put(filename, binaryData)
+# Push file endpoint
+@app.route("/push/<encryption>/<filename>", methods=['PUT'])
+def pushEndpoint(encryption, filename):
+    return push(encryption, filename)
+
+# Info endpoint
+@app.route("/info/<encryption>/<filename>", methods=['GET'])
+def infoEndpoint(encryption, filename):
+    return info(encryption, filename)
 
 if __name__ == '__main__':
     # parse -port, -parent_address, -cache_dir
