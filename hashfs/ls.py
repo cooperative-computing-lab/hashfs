@@ -5,7 +5,7 @@ import json
 import tempfile
 
 def LS(fs, dest_path, root_cksum):
-    _, dir_cksum = mkfs.get_node_by_path(fs, root_cksum, dest_path.split('/'), list())
+    _, dir_name, dir_cksum = mkfs.get_node_by_path(fs, root_cksum, dest_path.split('/'), list([('/', root_cksum)]))
 
     if dir_cksum == None:
         print("The path doesn't exist")
@@ -19,4 +19,5 @@ def LS(fs, dest_path, root_cksum):
     for name, content in dir_contents.iteritems():
         print("{:<12} {:<20}".format(content['type'], name))
 
-LS(sys.argv[1], sys.argv[2], sys.argv[3])
+if __name__ == "__main__":
+    LS(sys.argv[1], sys.argv[2], sys.argv[3])

@@ -11,15 +11,24 @@ def PUT(fs, src_path, dest_path, root_cksum):
         return
 
     dest_path = dest_path.split('/')
-    nodes_traversed = list()
-    nodes_traversed, dir_cksum = mkfs.get_node_by_path(fs, root_cksum,
-                                                    dest_path, nodes_traversed)
+    nodes_traversed = list([('/', root_cksum)])
+    # Get the node of directory the file is to be placed in
+    nodes_traversed, dir_name, dir_cksum = mkfs.get_node_by_path(fs, root_cksum,
+                                                    dest_path[:-1], nodes_traversed)
+    # Add containing directory to nodes_traversed
+    nodes_traversed.append((dir_name, dir_cksum))
 
     # Invalid root node
     if nodes_traversed == None:
         print("The root node provided is invalid: {}".format(root_cksum))
-        return
+        return "Unsuccessful"
 
-    print(mkfs.put_file_bubble_up(fs, src_path, dest_path, nodes_traversed))
+    if dir_cksum == None:
+        print("Unable to resolve provided destination path")
+        
+        return "Unsuccessful"
 
-PUT(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    return mkfs.put_file_bubble_up(fs, src_path, dest_path, nodes_traversed)
+
+if __name__ == "__main__":
+    print("New head: {}".format(PUT(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])))
