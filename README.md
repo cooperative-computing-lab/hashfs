@@ -11,6 +11,6 @@ $ pip install requests
 ```
 2) Run server
 ```
-cd caching
-python CacheServer.py --port portNum --parent-address address --dir directory
+$ cd caching
+$ python CacheServer.py --port portNum --parent-address address --dir directory
 ```
