@@ -20,7 +20,8 @@ class CacheLib:
             return -1
 
         if not req.ok:
-            print "Error getting response from cache: "+str(req.text)
+            print "Error getting response from cache: "+req.text
+            return -1
 
         # validate directory
         dirToSave = CacheUtils.validateDirectory(dirToSave)
@@ -46,9 +47,6 @@ class CacheLib:
             print "Could not open file at path "+filepath+": "+str(error)
             return -1
 
-        # get filename from path
-        filename = filepath.split("/")[-1]
-
         # make request to cache server
         try:
             req = requests.put("http://"+self.cacheServerAddress+"/put/"+encryption, data=fileContents)
@@ -64,3 +62,23 @@ class CacheLib:
             return -1
 
         return newFilename
+
+    def push(self, filename, encryption):
+        # make request to cache server
+        try:
+            req = requests.put("http://"+self.cacheServerAddress+"/push/"+encryption+"/"+filename, data=fileContents)
+        except requests.exceptions.RequestException as error:
+            print "Error making request to cache server: "+str(error)
+            return -1
+
+        # if requests did not succeed, print request body
+        if not req.ok:
+            if req.status_code == 200:
+                print "No such file in cache server: "+str(filename)
+                return -1
+            else:
+                print req.text
+                return -1
+
+        print "Success\n"
+        return 0
