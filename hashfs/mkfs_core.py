@@ -187,6 +187,10 @@ def make_directory(fs, dir_name, nodes_traversed):
 
 def load_node_to_cache(fs, cksum):
     cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
+    
+    if not os.path.isdir(cache_dir):
+        os.makedirs(cache_dir)
+
     if not os.path.exists("{}/{}".format(cache_dir, cksum)) and not get_file_from_s3(fs, cksum):
         return False
 
@@ -194,6 +198,10 @@ def load_node_to_cache(fs, cksum):
 
 def put_dir_info_in_cache(fs, cksum, data):
     cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
+
+    if not os.path.isdir(cache_dir):
+        os.makedirs(cache_dir)
+
     cache_node_path = "{}/{}".format(cache_dir, cksum)
     with open(cache_node_path, "w+") as df:
         json.dump(data, df)
@@ -202,6 +210,13 @@ def put_dir_info_in_cache(fs, cksum, data):
     
 def fetch_dir_info_from_cache(fs, dir_cksum):
     cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
+
+    if not os.path.isdir(cache_dir):
+        os.makedirs(cache_dir)
+
+    if not os.path.exists("{}/{}".format(cache_dir, dir_cksum)) and not get_file_from_s3(fs, dir_cksum):
+        return False
+
     with open("{}/{}".format(cache_dir, dir_cksum), "r") as df:
         data = json.load(df)
 
