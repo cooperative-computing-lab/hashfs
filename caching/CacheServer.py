@@ -64,18 +64,17 @@ def get(encryption, filename):
     return fileContents
 
 def put(encryption, binaryData):
+    if encryption != "sha256":
+        abortAndPrintError(400, "Can only use sha256 as hashing algorithm")
+    
     # get server config variables
     try:
         cacheDir = app.config.get("cacheDir")
     except:
         abortAndPrintError(500, "Error accessing Flask config")
 
-    if encryption == "sha256":
-        # get hash of file to use as filename
-        filename = CacheUtils.calculate_binary_data_cksum(binaryData)
-    else:
-        print "Can only use sha256 as hashing algorithm"
-        abortAndPrintError(400, "Can only use sha256 as hashing algorithm")
+    # get hash of file to use as filename
+    filename = CacheUtils.calculate_binary_data_cksum(binaryData)
 
     # open file and save contents to it
     try:
@@ -89,7 +88,7 @@ def put(encryption, binaryData):
 
 def push(encryption, filename):
     if encryption != "sha256":
-        return "Can only use sha256 hashing algorithm\n"
+        abortAndPrintError(400, "Can only use sha256 hashing algorithm")
 
     # get server config variables
     try:
@@ -100,7 +99,7 @@ def push(encryption, filename):
 
     # check that cache has file
     if not CacheUtils.doesFileExist(cacheDir, filename):
-        abortAndPrintError(400, "No such file in cache: "+str(filename))
+        abortAndPrintError(404, "No such file in cache: "+str(filename))
 
     # open file
     try:
@@ -119,7 +118,7 @@ def push(encryption, filename):
 
 def info(encryption, filename):
     if encryption != "sha256":
-        return "Can only use sha256 hashing algorithm\n"
+        abortAndPrintError(400, "Can only use sha256 hashing algorithm")
 
     # get server config variables
     try:
@@ -132,7 +131,10 @@ def info(encryption, filename):
     try:
         fileInfo = os.stat(cacheDir+filename)
     except OSError as error:
-        abortAndPrintError(500, error)
+        if error.errno == 2:
+            abortAndPrintError(404, "Not such file in cache: "+str(filename))
+        else:
+            abortAndPrintError(500, error)
 
     try:
         jsonFileInfo = {}
