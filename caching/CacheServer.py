@@ -39,7 +39,7 @@ def makeRequestToParentCache(filename):
 
 def get(encryption, filename):
     if encryption != "sha256":
-        return "Can only use sha256 hashing algorithm\n"
+        abortAndPrintError(400, "Can only use sha256 hashing algorithm\n")
 
     # get cache directory
     try:
@@ -114,13 +114,6 @@ def push(encryption, filename):
         putReq = requests.put("http://"+address+"/put/"+encryption, data=fileData)
     except requests.exceptions.RequestException as error:
         abortAndPrintError(500, "Error making PUT request to parent cache at address "+address+": "+str(error))
-
-    # make push request to parent?
-    '''try:
-        pushRequest = requests.put("http://"+address+"/push/"+filename)
-    except requests.exceptions.RequestException as error:
-        abortAndPrintError(500, "Error making GET request to parent cache at address "+address+": "+str(error))
-    '''
 
     return "success\n"
 
