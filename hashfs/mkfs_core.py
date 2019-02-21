@@ -73,11 +73,6 @@ def get_node_by_path(fs, root_node, path_list, nodes_traversed):
     cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
     directory_file = "{}/{}".format(cache_dir, root_node)
 
-    # Load node to cache before proceeding
-    if load_node_to_cache(fs, root_node) == False:
-        print("Unable to load node {} from parent".format(root_node))
-        return None, None, None
-
     # Open directory_file and traverse
     dir_content = fetch_dir_info_from_cache(fs, root_node)
 
@@ -209,14 +204,10 @@ def put_dir_info_in_cache(fs, cksum, data):
     return cache_node_path
     
 def fetch_dir_info_from_cache(fs, dir_cksum):
+    if load_node_to_cache(fs, dir_cksum) == False:
+        return None
+
     cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
-
-    if not os.path.isdir(cache_dir):
-        os.makedirs(cache_dir)
-
-    if not os.path.exists("{}/{}".format(cache_dir, dir_cksum)) and not get_file_from_s3(fs, dir_cksum):
-        return False
-
     with open("{}/{}".format(cache_dir, dir_cksum), "r") as df:
         data = json.load(df)
 
