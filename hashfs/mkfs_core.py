@@ -5,7 +5,7 @@ import json
 import hashlib
 import tempfile
 import botocore
-from CacheLib import CacheLib
+from caching.CacheLib import CacheLib
 
 s3 = boto3.resource('s3',
                     endpoint_url='http://localhost:9000',
@@ -52,8 +52,6 @@ def get_file_from_s3(fs, object_name):
         else:
             raise
     """
-
-    return True
 
 # Put the file in the bucket
 # TODO: May want to add "if file exist" check
