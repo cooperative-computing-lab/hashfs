@@ -5,6 +5,7 @@ import json
 import hashlib
 import tempfile
 import botocore
+from CacheLib import CacheLib
 
 s3 = boto3.resource('s3',
                     endpoint_url='http://localhost:9000',
@@ -13,6 +14,7 @@ s3 = boto3.resource('s3',
                     config=botocore.client.Config(signature_version='s3v4'),
                     region_name='us-east-1')
 
+c = CacheLib("localhost:9999")
 
 # Get file from bucket and save file in /tmp/mkfs/<fs>/
 # Returns True if successful, False if unsuccessful
@@ -36,6 +38,12 @@ def get_file_from_s3(fs, object_name):
             print("Cannot create {}".format(local_cache_dir))
             return False
 
+    if c.get(object_name, "sha256", local_cache_dir) != 0:
+        print("Failed to get file from parent")
+        return False
+
+    return True
+    """
     try:
         s3.Bucket(fs).download_file(object_name, "{}/{}".format(local_cache_dir, object_name))
     except botocore.exceptions.ClientError as e:
@@ -43,13 +51,17 @@ def get_file_from_s3(fs, object_name):
             return False
         else:
             raise
+    """
 
     return True
 
 # Put the file in the bucket
 # TODO: May want to add "if file exist" check
 def put_file_to_s3(fs, object_name, local_name):
-    s3.Bucket(fs).upload_file(local_name, object_name)
+    #s3.Bucket(fs).upload_file(local_name, object_name)
+    cksum = c.put(local_name, "sha256")
+    print(cksum)
+    c.push(cksum, "sha256")
 
 # root_node: cksum of root directories to begin search from
 # TODO: Check if node is directory when traversing
