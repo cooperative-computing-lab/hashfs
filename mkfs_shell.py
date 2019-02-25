@@ -60,6 +60,8 @@ if __name__ == "__main__":
             if temp != "Unsuccessful":
                 root_cksum = temp
                 new_cksums.append(root_cksum)
+        elif op == "usage":
+            usage()
 
         print("Current head: {}".format(root_cksum))
         command = raw_input("> ")
