@@ -3,16 +3,19 @@
 ### Running a Cache Server:
 1) Install dependecies
 ```
-$ curl --location --output virtualenv-16.4.0.tar.gz https://github.com/pypa/virtualenv/tarball/16.4.0
-$ tar xvfz virtualenv-16.4.0.tar.gz
-$ source pypa-virtualenv-YYYYYY/myVE/bin/activate
-$ pip install flask
-$ pip install requests
+curl --location --output virtualenv-16.4.0.tar.gz https://github.com/pypa/virtualenv/tarball/16.4.0
+tar xvfz virtualenv-16.4.0.tar.gz
+python pypa-virtualenv-bc1d76d/virtualenv.py myVE
+source myVE/bin/activate
+pip install flask
+pip install requests
+
 ```
 2) Run server
 ```
-$ cd caching
-$ python CacheServer.py --port portNum --parent-address address --dir directory
+cd hashfs/caching
+python CacheServer.py --port 9999 --parent-address 0 --dir /tmp/cache
+
 ```
 
 ### Running mkfs_shell
