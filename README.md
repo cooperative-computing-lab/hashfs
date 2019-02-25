@@ -14,3 +14,14 @@ $ pip install requests
 $ cd caching
 $ python CacheServer.py --port portNum --parent-address address --dir directory
 ```
+
+### Running mkfs_shell
+1) Start a CacheServer with port 9999 (mkfs_core.py hardcodes to use this port for now)
+2) Inside the directory created for cache data from starting a CacheServer, create a text file named 'a' with '{}' inside as string, this serves as the initial root directory with no content inside
+3) Run the mkfs_shell. The shell will prompt for namespace and root checksum, enter random value for namespace (was used as bucket name when dealing with s3) and 'a' for the root checksum for the first run
+```
+python mkfs_shell.py
+```
+4) Type usage when prompted at > to see all commands available
+
+(LS at / doesn't work, needs fixing)
