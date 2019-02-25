@@ -1,10 +1,10 @@
 from __future__ import print_function
-import mkfs_core as mkfs
-from get import GET
-from put import PUT
-from ls import LS
-from mkdir import MKDIR
-from delete import DELETE
+import hashfs.mkfs_core as mkfs
+from hashfs.get import GET
+from hashfs.put import PUT
+from hashfs.ls import LS
+from hashfs.mkdir import MKDIR
+from hashfs.delete import DELETE
 
 def usage():
     print("Commands:")
@@ -60,6 +60,8 @@ if __name__ == "__main__":
             if temp != "Unsuccessful":
                 root_cksum = temp
                 new_cksums.append(root_cksum)
+        elif op == "usage":
+            usage()
 
         print("Current head: {}".format(root_cksum))
         command = raw_input("> ")
