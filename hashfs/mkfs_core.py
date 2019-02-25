@@ -1,18 +1,20 @@
 from __future__ import print_function
 import os
-import boto3
+#import boto3
 import json
 import hashlib
 import tempfile
 import botocore
 from caching.CacheLib import CacheLib
 
+"""
 s3 = boto3.resource('s3',
                     endpoint_url='http://localhost:9000',
                     aws_access_key_id='7FJTEI4TFG2QQTS03PN0',
                     aws_secret_access_key='VwLxI1A0YIX0ZcS3nPV44PdolnxTaT5eYWLU+QZV',
                     config=botocore.client.Config(signature_version='s3v4'),
                     region_name='us-east-1')
+"""
 
 c = CacheLib("localhost:9999")
 

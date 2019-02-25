@@ -10,7 +10,7 @@ import CacheUtils
 
 app = Flask(__name__)
 
-def makeRequestToParentCache(filename):
+def makeRequestToParentCache(encryption, filename):
     # get server config variables
     try:
         address = app.config.get("parentCacheAddress")
@@ -20,7 +20,7 @@ def makeRequestToParentCache(filename):
 
     # make request to parent cache
     try:
-        getRequest = requests.get("http://"+address+"/get/"+filename)
+        getRequest = requests.get("http://{}/get/{}/{}".format(address, encryption, filename))
     except requests.exceptions.RequestException as error:
         abortAndPrintError(500, "Error making GET request to parent cache at address "+address+": "+str(error))
 
@@ -29,7 +29,7 @@ def makeRequestToParentCache(filename):
 
     # save file locally
     try:
-        with open(cacheDir+filename, "wb") as f:
+        with open("{}/{}".format(cacheDir, filename), "wb") as f:
             f.write(getRequest.content)
     except IOError as error:
         abortAndPrintError(500, "Error saving cached file locally: "+str(error))
@@ -44,19 +44,20 @@ def get(encryption, filename):
     # get cache directory
     try:
         cacheDir = app.config.get("cacheDir")
+        app.logger.info(cacheDir)
     except:
         abortAndPrintError(500, "Error accessing Flask config")
 
     # Look for file on disk, if it's not there, get it from parent cache
     try:
         if filename not in os.listdir(cacheDir):
-            makeRequestToParentCache(filename)
+            makeRequestToParentCache(encryption, filename)
     except IOError as error:
         abortAndPrintError(500, error)
 
     # open file and return binary file contents
     try:
-        with open(cacheDir+filename, "rb") as f:
+        with open("{}/{}".format(cacheDir, filename), "rb") as f:
             fileContents = f.read()
     except IOError as error:
         abortAndPrintError(500, error)
@@ -78,7 +79,7 @@ def put(encryption, binaryData):
 
     # open file and save contents to it
     try:
-        with open(cacheDir+filename, "wb") as f:
+        with open("{}/{}".format(cacheDir, filename), "wb") as f:
             f.write(binaryData)
     except IOError as error:
         abortAndPrintError(500, error)

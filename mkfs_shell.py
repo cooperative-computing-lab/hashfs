@@ -16,7 +16,8 @@ def usage():
 
 
 if __name__ == "__main__":
-    fs = raw_input("Enter namespace: ")
+    #fs = raw_input("Enter namespace: ")
+    fs = "dummy"
     root_cksum = raw_input("Enter root checksum: ")
 
     new_cksums = list([root_cksum])
