@@ -7,11 +7,11 @@ import tempfile
 def LS(fs, dest_path, root_cksum):
     if dest_path == '/':
         node = mkfs.Node('/', root_cksum, "directory")
-        if load_node_to_cache(fs, node.node_cksum) == False:
+        if mkfs.load_node_to_cache(fs, node.node_cksum) == False:
             print("Invalid root: {}".format(root_cksum))
             return
-        
-    _, node = mkfs.get_node_by_path(fs, root_cksum, dest_path.split('/'), list([('/', root_cksum)]))
+    else:
+        _, node = mkfs.get_node_by_path(fs, root_cksum, dest_path.split('/'), list([('/', root_cksum)]))
 
     if node == None:
         print("The path doesn't exist")
