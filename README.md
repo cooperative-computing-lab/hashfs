@@ -19,6 +19,7 @@ python CacheServer.py --port 9999 --parent-address 0 --dir /tmp/cache
 ```
 
 ### To run the demo:
+After activating the virtualenv and install flask and requests, run the demo script
 ```
 ./demo.sh
 ```
