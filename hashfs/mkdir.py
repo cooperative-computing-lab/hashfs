@@ -8,10 +8,10 @@ def MKDIR(fs, dir_path, root_cksum):
 
     if len(dir_path) != 1:
         # Get containing directory node for the new directory
-        nodes_traversed, name, cksum = mkfs.get_node_by_path(fs, root_cksum, dir_path[:-1], nodes_traversed)
-        if cksum is None:
+        nodes_traversed, node = mkfs.get_node_by_path(fs, root_cksum, dir_path[:-1], nodes_traversed)
+        if node.node_cksum is None:
             return "Unsuccessful"
-        nodes_traversed.append((name, cksum))
+        nodes_traversed.append((node.node_name, node.node_cksum))
 
     return mkfs.make_directory(fs, dir_path[-1], nodes_traversed)
 

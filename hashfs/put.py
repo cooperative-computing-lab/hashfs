@@ -13,17 +13,17 @@ def PUT(fs, src_path, dest_path, root_cksum):
     dest_path = dest_path.split('/')
     nodes_traversed = list([('/', root_cksum)])
     # Get the node of directory the file is to be placed in
-    nodes_traversed, dir_name, dir_cksum = mkfs.get_node_by_path(fs, root_cksum,
-                                                    dest_path[:-1], nodes_traversed)
-    # Add containing directory to nodes_traversed
-    nodes_traversed.append((dir_name, dir_cksum))
+    nodes_traversed, node = mkfs.get_node_by_path(fs, root_cksum, dest_path[:-1], nodes_traversed)
 
     # Invalid root node
     if nodes_traversed == None:
         print("The root node provided is invalid: {}".format(root_cksum))
         return "Unsuccessful"
 
-    if dir_cksum == None:
+    # Add containing directory to nodes_traversed
+    nodes_traversed.append((node.node_name, node.node_cksum))
+
+    if node.node_cksum == None:
         print("Unable to resolve provided destination path")
         
         return "Unsuccessful"

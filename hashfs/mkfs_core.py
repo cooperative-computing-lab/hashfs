@@ -1,26 +1,22 @@
 from __future__ import print_function
 import os
-#import boto3
 import json
 import hashlib
 import tempfile
-#import botocore
 from caching.CacheLib import CacheLib
 
-"""
-s3 = boto3.resource('s3',
-                    endpoint_url='http://localhost:9000',
-                    aws_access_key_id='7FJTEI4TFG2QQTS03PN0',
-                    aws_secret_access_key='VwLxI1A0YIX0ZcS3nPV44PdolnxTaT5eYWLU+QZV',
-                    config=botocore.client.Config(signature_version='s3v4'),
-                    region_name='us-east-1')
-"""
 
 c = CacheLib("localhost:9999")
 
+class Node:
+    def __init__(self, node_name, node_cksum, node_type):
+        self.node_name = node_name
+        self.node_cksum = node_cksum
+        self.node_type = node_type
+
 # Get file from bucket and save file in /tmp/mkfs/<fs>/
 # Returns True if successful, False if unsuccessful
-def get_file_from_s3(fs, object_name):
+def get_file_from_parent(fs, object_name):
     """Get file from parent and save file in /tmp/mkfs/<fs>/
 
     Args:
@@ -45,22 +41,11 @@ def get_file_from_s3(fs, object_name):
         return False
 
     return True
-    """
-    try:
-        s3.Bucket(fs).download_file(object_name, "{}/{}".format(local_cache_dir, object_name))
-    except botocore.exceptions.ClientError as e:
-        if e.response['Error']['Code'] == "404":
-            return False
-        else:
-            raise
-    """
 
 # Put the file in the bucket
 # TODO: May want to add "if file exist" check
-def put_file_to_s3(fs, object_name, local_name):
-    #s3.Bucket(fs).upload_file(local_name, object_name)
+def put_file_to_parent(fs, object_name, local_name):
     cksum = c.put(local_name, "sha256")
-    print(cksum)
     c.push(cksum, "sha256")
 
 # root_node: cksum of root directories to begin search from
@@ -90,16 +75,14 @@ def get_node_by_path(fs, root_node, path_list, nodes_traversed):
 
     sub_node = dir_content.get(path_list[0])
     if sub_node == None:
-        fullpath = "/".join([x[0] for x in nodes_traversed])
-        print("Path ends at {}".format(fullpath))
-        return nodes_traversed, None, None
+        return nodes_traversed, None
     
     # If node is found, make sure it's cached locally and return
     if len(path_list) == 1:
         if load_node_to_cache(fs, sub_node['cksum']) == False:
             print("The node {} doesn't exist in s3".format(sub_node['cksum']))
-            return nodes_traversed, None, None
-        return nodes_traversed, sub_node['name'], sub_node['cksum']
+            return nodes_traversed, None
+        return nodes_traversed, Node(sub_node['name'], sub_node['cksum'], sub_node['type'])
     
     # Check if sub_node is directory
     if sub_node['type'] == 'directory':
@@ -131,7 +114,7 @@ def put_file_bubble_up(fs, src_path, dest_path, nodes_traversed):
 
     # Put file named as the cksum
     file_cksum = calculate_file_cksum(src_path)
-    put_file_to_s3(fs, file_cksum, src_path)
+    put_file_to_parent(fs, file_cksum, src_path)
 
     # Bubble up on existing directories
     curr_cksum = bubble_up_existing_dir(fs, nodes_traversed, dest_path[-1], file_cksum, "file")
@@ -161,7 +144,7 @@ def bubble_up_existing_dir(fs, nodes_traversed, curr_name, curr_cksum, curr_type
         curr_type = "directory"
         
         cache_node_path = put_dir_info_in_cache(fs, curr_cksum, data)
-        put_file_to_s3(fs, curr_cksum, cache_node_path)
+        put_file_to_parent(fs, curr_cksum, cache_node_path)
 
     return curr_cksum
 
@@ -175,7 +158,7 @@ def delete_node_bubble_up(fs, delete_name, delete_cksum, nodes_traversed):
 
     new_cksum = calculate_directory_cksum(dir_data)
     cache_node_path = put_dir_info_in_cache(fs, new_cksum, dir_data)
-    put_file_to_s3(fs, new_cksum, cache_node_path)
+    put_file_to_parent(fs, new_cksum, cache_node_path)
 
     root_cksum = bubble_up_existing_dir(fs, nodes_traversed[:-1], containing_dir[0], new_cksum, "directory")
 
@@ -185,7 +168,7 @@ def make_directory(fs, dir_name, nodes_traversed):
     data = {}
     dir_cksum = calculate_directory_cksum(data)
     cache_node_path = put_dir_info_in_cache(fs, dir_cksum, data)
-    put_file_to_s3(fs, dir_cksum, cache_node_path)
+    put_file_to_parent(fs, dir_cksum, cache_node_path)
 
     root_cksum = bubble_up_existing_dir(fs, nodes_traversed, dir_name, dir_cksum, "directory")
 
@@ -198,7 +181,7 @@ def load_node_to_cache(fs, cksum):
     if not os.path.isdir(cache_dir):
         os.makedirs(cache_dir)
 
-    if not os.path.exists("{}/{}".format(cache_dir, cksum)) and not get_file_from_s3(fs, cksum):
+    if not os.path.exists("{}/{}".format(cache_dir, cksum)) and not get_file_from_parent(fs, cksum):
         return False
 
     return True

@@ -5,14 +5,19 @@ import json
 import tempfile
 
 def LS(fs, dest_path, root_cksum):
-    _, dir_name, dir_cksum = mkfs.get_node_by_path(fs, root_cksum, dest_path.split('/'), list([('/', root_cksum)]))
+    _, node = mkfs.get_node_by_path(fs, root_cksum, dest_path.split('/'), list([('/', root_cksum)]))
 
-    if dir_cksum == None:
+    if node == None:
         print("The path doesn't exist")
         return
 
+    # Check if node is a directory
+    if node.node_type != "directory":
+        print("{} is not a directory".format(dest_path))
+        return
+
     # Open dir_node and list files
-    dir_node_path = "{}/mkfs/{}/{}".format(tempfile.gettempdir(), fs, dir_cksum)
+    dir_node_path = "{}/mkfs/{}/{}".format(tempfile.gettempdir(), fs, node.node_cksum)
     with open(dir_node_path, "r") as df:
         dir_contents = json.load(df) 
     
