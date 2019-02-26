@@ -5,8 +5,8 @@
 ```
 curl --location --output virtualenv-16.4.0.tar.gz https://github.com/pypa/virtualenv/tarball/16.4.0
 tar xvfz virtualenv-16.4.0.tar.gz
-python pypa-virtualenv-bc1d76d/virtualenv.py myVE
-source myVE/bin/activate
+python pypa-virtualenv-bc1d76d/virtualenv.py flask_virtualenv
+source flask_virtualenv/bin/activate
 pip install flask
 pip install requests
 
@@ -18,13 +18,17 @@ python CacheServer.py --port 9999 --parent-address 0 --dir /tmp/cache
 
 ```
 
-### Running mkfs_shell
-1) Start a CacheServer with port 9999 (mkfs_core.py hardcodes to use this port for now)
-2) Inside the directory created for cache data from starting a CacheServer, create a text file named 'a' with '{}' inside as string, this serves as the initial root directory with no content inside
-3) Run the mkfs_shell. The shell will prompt for namespace and root checksum, enter random value for namespace (was used as bucket name when dealing with s3) and 'a' for the root checksum for the first run
+### To run the demo:
 ```
-python mkfs_shell.py
+./demo.sh
 ```
-4) Type usage when prompted at > to see all commands available
+- The script will start up two CacheServer, one will serving as the root while 
+  the other will be the caching layer between the root and the filesystem shell.
+- The servers will be set to run in the background with all output redirected to
+  their respective log files
+- It will then prompt for a checksum, please enter 'a'
+- Then type usage when prompted at > to see all commands available
+- p.s. since the servers are running in the background, either exit the terminal
+  or kill the processes manually
 
-(LS at / doesn't work, needs fixing)
+(LS at / doesn't work yet, needs fixing)

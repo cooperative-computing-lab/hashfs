@@ -4,7 +4,7 @@ import os
 import json
 import hashlib
 import tempfile
-import botocore
+#import botocore
 from caching.CacheLib import CacheLib
 
 """
