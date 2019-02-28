@@ -16,7 +16,6 @@ def usage():
 
 
 if __name__ == "__main__":
-    #fs = raw_input("Enter namespace: ")
     fs = "dummy"
     root_cksum = raw_input("Enter root checksum: ")
 
@@ -31,11 +30,13 @@ if __name__ == "__main__":
         if op == "GET":
             if len(args) != 2:
                 usage()
+                continue
             GET(fs, args[0], args[1], root_cksum)
 
         elif op == "PUT":
             if len(args) != 2:
                 usage()
+                continue
             temp = PUT(fs, args[0], args[1], root_cksum)
             if temp != "Unsuccessful":
                 root_cksum = temp
@@ -44,11 +45,13 @@ if __name__ == "__main__":
         elif op == "LS":
             if len(args) != 1:
                 usage()
+                continue
             LS(fs, args[0], root_cksum)
 
         elif op == "MKDIR":
             if len(args) != 1:
                 usage()
+                continue
             temp = MKDIR(fs, args[0], root_cksum)
             if temp != "Unsuccessful":
                 root_cksum = temp
@@ -57,6 +60,7 @@ if __name__ == "__main__":
         elif op == "DELETE":
             if len(args) != 1:
                 usage()
+                continue
             temp = DELETE(fs, args[0], root_cksum)
             if temp != "Unsuccessful":
                 root_cksum = temp
