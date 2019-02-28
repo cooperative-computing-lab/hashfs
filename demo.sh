@@ -11,3 +11,7 @@ echo "{}" > "./test_cache_root/a"
 
 # Run mkfs_shell.py
 python mkfs_shell.py
+
+# Kill CacheServers
+ps -ef | grep 'python caching/CacheServer.py --port 9998' | grep -v grep | awk '{print $2}' | xargs kill
+ps -ef | grep 'python caching/CacheServer.py --port 9999' | grep -v grep | awk '{print $2}' | xargs kill
