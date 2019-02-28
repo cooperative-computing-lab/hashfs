@@ -75,6 +75,8 @@ def get_node_by_path(fs, root_node, path_list, nodes_traversed):
 
     sub_node = dir_content.get(path_list[0])
     if sub_node == None:
+        full_path = "{}".format("/".join([x[0] for x in nodes_traversed[1:]))
+        print("The path {} doesn't exist".format(full_path))
         return nodes_traversed, None
     
     # If node is found, make sure it's cached locally and return
@@ -89,7 +91,7 @@ def get_node_by_path(fs, root_node, path_list, nodes_traversed):
         nodes_traversed.append((path_list[0], sub_node['cksum']))
         return get_node_by_path(fs, sub_node['cksum'], path_list[1:], nodes_traversed)
     else:
-        fullpath = "/{}".format("/".join([x[0] for x in nodes_traversed]))
+        fullpath = "{}".format("/".join([x[0] for x in nodes_traversed]))
         print("{} is not a directory".format(fullpath))
         return nodes_traversed, None
 
@@ -222,3 +224,9 @@ def calculate_file_cksum(src_filepath):
 
     return hasher.hexdigest()
 
+# Since every path needs to be absolute path from root, remove leading /
+def clean_path(path):
+    if path[0] == '/':
+        return path[1:]
+    
+    return path

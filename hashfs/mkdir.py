@@ -3,6 +3,7 @@ import mkfs_core as mkfs
 import sys
 
 def MKDIR(fs, dir_path, root_cksum):
+    dir_path = mkfs.clean_path(dir_path)
     dir_path = dir_path.split('/')
     nodes_traversed = list([('/', root_cksum)])
 
