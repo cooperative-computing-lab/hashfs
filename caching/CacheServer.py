@@ -18,6 +18,10 @@ def makeRequestToParentCache(encryption, filename):
     except:
         abortAndPrintError(500, "Error accessing Flask config")
 
+    # check if server has parent. If it's root, and this method was called, return 404 file not found
+    if address == -1:
+        abortAndPrintError(404, "File not found")
+
     # make request to parent cache
     try:
         getRequest = requests.get("http://{}/get/{}/{}".format(address, encryption, filename))
@@ -98,6 +102,10 @@ def push(encryption, filename):
     except:
         abortAndPrintError(500, "Error accessing Flask config")
 
+    # check if server has parent, if not, return ok
+    if address == -1:
+        abortAndPrintError(200, "No parent to push to")
+
     # check that cache has file
     if not CacheUtils.doesFileExist(cacheDir, filename):
         abortAndPrintError(404, "No such file in cache: "+str(filename))
@@ -124,7 +132,6 @@ def info(encryption, filename):
     # get server config variables
     try:
         cacheDir = app.config.get("cacheDir")
-        address = app.config.get("parentCacheAddress")
     except:
         abortAndPrintError(500, "Error accessing Flask config")
 
@@ -182,10 +189,11 @@ def infoEndpoint(encryption, filename):
 
 if __name__ == '__main__':
     # parse -port, -parent_address, -cache_dir
-    usageMsg = "Usage: CacheServer.py --port portNum --parent-address address --dir path"
+    usageMsg = "Usage: CacheServer.py --port portNum --dir path [--parent-address address]"
     portNum = None
-    parentAddress = None
+    parentAddress = -1
     cacheDir = None
+
     if len(sys.argv) < 4:
         print usageMsg
         sys.exit(-1)
