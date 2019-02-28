@@ -11,6 +11,7 @@ def LS(fs, dest_path, root_cksum):
             print("Invalid root: {}".format(root_cksum))
             return
     else:
+        dest_path = mkfs.clean_path(dest_path)
         _, node = mkfs.get_node_by_path(fs, root_cksum, dest_path.split('/'), list([('/', root_cksum)]))
 
     if node == None:

@@ -6,10 +6,10 @@ import shutil
 import tempfile
 
 def GET(fs, src_path, dest_path, root_cksum):
+    src_path = mkfs.clean_path(src_path)
     _, node = mkfs.get_node_by_path(fs, root_cksum, src_path.split('/'), list([('/', root_cksum)]))
 
-    if node.node_cksum == None:
-        print("Failed to retrieve {} from {}".format(src_path, fs))
+    if node == None:
         return False
 
     cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)

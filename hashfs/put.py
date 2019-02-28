@@ -10,6 +10,7 @@ def PUT(fs, src_path, dest_path, root_cksum):
         print("{} is not a valid local path".format(src_path))
         return
 
+    dest_path = mkfs.clean_path(dest_path)
     dest_path = dest_path.split('/')
     nodes_traversed = list([('/', root_cksum)])
     # Get the node of directory the file is to be placed in
