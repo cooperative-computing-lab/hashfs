@@ -29,7 +29,4 @@ After activating the virtualenv and install flask and requests, run the demo scr
   their respective log files
 - It will then prompt for a checksum, please enter 'a'
 - Then type usage when prompted at > to see all commands available
-- p.s. since the servers are running in the background, either exit the terminal
-  or kill the processes manually
-
-(LS at / doesn't work yet, needs fixing)
+- CacheServers will be killed upon exiting the shell.
