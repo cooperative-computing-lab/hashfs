@@ -12,6 +12,15 @@ def doesFileExist(cacheDir, filename):
 
     return True
 
+# get's the <p> tag text from a server error response
+def getErrorMessageFromServerResponse(text):
+    preP = text.split("<p>")
+    if len(preP) > 1:
+        postP = preP[1].split("</p>")
+        return postP[0]
+    else:
+        return text
+
 # if directory doesn't exist, create it, and return dir name
 def validateDirectory(dirPath):
     if len(dirPath) == 0:
@@ -26,7 +35,6 @@ def validateDirectory(dirPath):
             if not os.path.isdir(dirPath):
                 os.makedirs(dirPath)
         except OSError as error:
-            print "Error creating specified directory: "+str(error)
             return -1
     return dirPath
 

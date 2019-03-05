@@ -91,7 +91,7 @@ def get_node_by_path(fs, root_node, path_list, nodes_traversed):
         nodes_traversed.append((path_list[0], sub_node['cksum']))
         return get_node_by_path(fs, sub_node['cksum'], path_list[1:], nodes_traversed)
     else:
-        fullpath = "{}".format("/".join([x[0] for x in nodes_traversed]))
+        fullpath = "{}".format("/".join([x[0] for x in nodes_traversed[1:]]))
         print("{} is not a directory".format(fullpath))
         return nodes_traversed, None
 
