@@ -8,7 +8,7 @@ def PUT(fs, src_path, dest_path, root_cksum):
     # Check if src_path is a local file that exists
     if not os.path.isfile(src_path):
         print("{} is not a valid local path".format(src_path))
-        return
+        return "Unsuccessful"
 
     dest_path = mkfs.clean_path(dest_path)
     dest_path = dest_path.split('/')
