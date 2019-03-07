@@ -30,3 +30,19 @@ After activating the virtualenv and install flask and requests, run the demo scr
 - It will then prompt for a checksum, please enter 'a'
 - Then type usage when prompted at > to see all commands available
 - CacheServers will be killed upon exiting the shell.
+
+### FUSE Module
+HashFS can be mounted as a file system via FUSE.
+The implementation uses the Python package `fuse-python`,
+which is available through `pip install`.
+Due to dependencies on the host machine's `libfuse` installation,
+Python might have trouble with library search.
+On RHEL7 machines, for example,
+`import fuse` fails searching for `libfuse.so.2`.
+The easiest fix is to set `RPATH` when installing.
+
+    pip install --global-option=build_ext --global-option='--rpath=/usr/lib64' fuse-python
+
+To run the FUSE module,
+
+    ./hashfs_fuse -o root=<HASH> <MOUNTPOINT>
