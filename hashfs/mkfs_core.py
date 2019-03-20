@@ -3,10 +3,10 @@ import os
 import json
 import hashlib
 import tempfile
-from caching.CacheLib import CacheLib
+from caching.CacheLib import CacheLib, FileNotFound, InternalServerError
 
 
-c = CacheLib("localhost:9999")
+c = CacheLib("cclws05.cse.nd.edu:9999")
 
 class Node:
     def __init__(self, node_name, node_cksum, node_type):
@@ -35,18 +35,31 @@ def get_file_from_parent(fs, object_name):
         except os.error:
             print("Cannot create {}".format(local_cache_dir))
             return False
-
+    
+    try:
+        c.get(object_name, "sha256", local_cache_dir)
+    except FileNotFound as e:
+        print("{} doesn't exist".format(object_name))
+        return False
+    except InternalServerError as e:
+        print(e)
+        
+    """
     if c.get(object_name, "sha256", local_cache_dir) != 0:
         print("Failed to get file from parent")
         return False
+    """
 
     return True
 
 # Put the file in the bucket
 # TODO: May want to add "if file exist" check
 def put_file_to_parent(fs, object_name, local_name):
-    cksum = c.put(local_name, "sha256")
-    c.push(cksum, "sha256")
+    try:
+        cksum = c.put(local_name, "sha256")
+        #c.push(cksum, "sha256")
+    except InternalServerError as e:
+        print(e)
 
 # root_node: cksum of root directories to begin search from
 # TODO: Check if node is directory when traversing
@@ -67,15 +80,12 @@ def get_node_by_path(fs, root_node, path_list, nodes_traversed):
         str : the name of the node found (None if an error occured)
         str : the cksum of the node found (None if an error occured)
     """
-    cache_dir = "{}/mkfs/{}".format(tempfile.gettempdir(), fs)
-    directory_file = "{}/{}".format(cache_dir, root_node)
-
     # Open directory_file and traverse
     dir_content = fetch_dir_info_from_cache(fs, root_node)
 
     sub_node = dir_content.get(path_list[0])
     if sub_node == None:
-        full_path = "{}".format("/".join([x[0] for x in nodes_traversed[1:]))
+        full_path = "{}".format("/".join([x[0] for x in nodes_traversed[1:]]))
         print("The path {} doesn't exist".format(full_path))
         return nodes_traversed, None
     
