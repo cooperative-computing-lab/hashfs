@@ -75,7 +75,7 @@ def get_node_by_path(fs, root_node, path_list, nodes_traversed):
 
     sub_node = dir_content.get(path_list[0])
     if sub_node == None:
-        full_path = "{}".format("/".join([x[0] for x in nodes_traversed[1:]))
+        full_path = "{}".format("/".join([x[0] for x in nodes_traversed[1:]]))
         print("The path {} doesn't exist".format(full_path))
         return nodes_traversed, None
     

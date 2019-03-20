@@ -4,6 +4,7 @@ import os, sys
 import errno
 import stat
 import fcntl
+from hashfs.mkfs_core import get_node_by_path
 
 # from examples in libfuse/python-fuse
 # pull in some spaghetti to make this stuff work without fuse-py being installed
@@ -158,17 +159,18 @@ class HashFS(Fuse):
         #    yield fuse.Direntry(e)
 
     def open(self, path, flags, *mode):
-        raise NotImplementedError
         #TODO get ready to use a file
         # should (sometimes) check for existence of path and return
         # -errno.ENOENT if it's missing.
         # this call has a lot of variations and edge cases, so don't worry too
         # much about getting things perfect on the first pass.
+        node = get_node_by_path("hashfs", self.root, path.split("/"), [])
+        if node is None:
+            return -errno.ENOENT
+        return os.open(node.node_cksum, "r+b") # open for read+write without truncation as binary file
 
-    def read(self, path, length, offset):
-        raise NotImplementedError
-        #TODO return file contents
-        # length and offset work as with pread(2)
+    def read(self, path, length, offset, fh):
+        return os.pread(fh, length, offset)
 
     def write(self, path, buf, offset):
         raise NotImplementedError
