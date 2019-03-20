@@ -21,7 +21,7 @@ def load_directory(dir_name):
         for f in files:
             filepath = "{}/{}".format(dirpath, f)
             if not os.path.isfile(filepath): continue
-            #print("putting file {}".format(filepath))
+            print("putting file {}".format(filepath))
             cksum = PUT("dummy", filepath, filepath, curr_head)
             if cksum == "Unsuccessful":
                 print("put {} failed".format(filepath))

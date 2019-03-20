@@ -1,0 +1,5 @@
+with prints: 3m9.511s
+with only mkdir prints: 2m55.644s
+
+no cache layer with prints: 0m48.539s
+no cache layer with only mkdir prints: 0m46.062s

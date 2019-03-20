@@ -6,7 +6,7 @@ import tempfile
 from caching.CacheLib import CacheLib, FileNotFound, InternalServerError
 
 
-c = CacheLib("localhost:9999")
+c = CacheLib("cclws05.cse.nd.edu:9999")
 
 class Node:
     def __init__(self, node_name, node_cksum, node_type):
@@ -57,7 +57,7 @@ def get_file_from_parent(fs, object_name):
 def put_file_to_parent(fs, object_name, local_name):
     try:
         cksum = c.put(local_name, "sha256")
-        c.push(cksum, "sha256")
+        #c.push(cksum, "sha256")
     except InternalServerError as e:
         print(e)
 
