@@ -5,6 +5,7 @@ import errno
 import stat
 import fcntl
 from hashfs.mkfs_core import get_node_by_path
+from hashfs.mkfs_core import Node
 
 # from examples in libfuse/python-fuse
 # pull in some spaghetti to make this stuff work without fuse-py being installed
@@ -151,12 +152,26 @@ class HashFS(Fuse):
         # if it's not a directory
 
     def readdir(self, path, offset):
-        raise NotImplementedError
-
         #TODO list directory contents
         # should look something like
         #for e in SOMETHING:
         #    yield fuse.Direntry(e)
+        dest_path = mkfs.clean_path(dest_path)
+        _, node = mkfs.get_node_by_path(fs, root_cksum, dest_path.split('/'), list([('/', root_cksum)]))
+
+        if node == None:
+            print("The path doesn't exist")
+            return -errno.ENOENT
+
+        # Check if node is a directory
+        if node.node_type != "directory":
+            print("{} is not a directory".format(dest_path))
+            return -errno.ENOENT
+
+        # Open dir_node and list files
+	dir_contents = fetch_dir_info_from_cache("hashfs", node.node_cksum)
+        for name in '.', '..', dir_contents.keys():
+            yield fuse.Direntry(name)
 
     def open(self, path, flags, *mode):
         #TODO get ready to use a file
