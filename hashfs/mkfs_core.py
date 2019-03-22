@@ -46,7 +46,7 @@ def get_file_from_parent(fs, object_name):
 # TODO: May want to add "if file exist" check
 def put_file_to_parent(fs, object_name, local_name):
     cksum = c.put(local_name, "sha256")
-    c.push(cksum, "sha256")
+    #c.push(cksum, "sha256")
 
 # root_node: cksum of root directories to begin search from
 # TODO: Check if node is directory when traversing

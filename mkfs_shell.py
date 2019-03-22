@@ -16,7 +16,7 @@ def usage():
 
 
 if __name__ == "__main__":
-    fs = "dummy"
+    fs = "hashfs"
     root_cksum = raw_input("Enter root checksum: ")
 
     new_cksums = list([root_cksum])

@@ -4,7 +4,7 @@ import os, sys
 import errno
 import stat
 import fcntl
-from hashfs.mkfs_core import get_node_by_path
+from hashfs.mkfs_core import get_node_by_path, Node, fetch_dir_info_from_cache
 
 # from examples in libfuse/python-fuse
 # pull in some spaghetti to make this stuff work without fuse-py being installed
@@ -60,11 +60,6 @@ class HashFS(Fuse):
         # current FS root
 
     def getattr(self, path):
-        out = fuse.Stat()
-        out.st_uid = os.getuid()
-        out.st_gid = os.getgid()
-
-        raise NotImplementedError
         #TODO fill in missing stat fields
         # the most important ones:
         # - st_ino: can probably be 0 for now, but should be chosen better.
@@ -78,6 +73,39 @@ class HashFS(Fuse):
         #       target, directory listing, etc.)
         # - st_nlink: should be 1 for files, 2 + the number of immediate
         #       subdirectories for directories
+
+        out = fuse.Stat()
+        out.st_uid = os.getuid()
+        out.st_gid = os.getgid()
+        out.st_ino = 0
+        out.st_dev = 0
+        out.st_atime = 0
+        out.st_mtime = 0
+        out.st_ctime = 0
+
+        # Get metadata for the node
+        _, parent_node = get_node_by_path("hashfs", self.root, path.split("/")[:-1], list([('/', self.root)]))
+        _, node = get_node_by_path("hashfs", self.root, path.split('/'), list([('/', self.root)]))
+
+        if parent_node is None or node is None:
+            return -errno.ENOENT
+
+        parent_dir_info = fetch_dir_info_from_cache("hashfs", parent_node.node_cksum)
+        node_metadata = parent_dir_info[path.split('/')[-1]
+
+        if node_metadata['type'] == 'file':
+            out.st_mode = stat.S_IFREG | 0o700
+            out.st_nlink = 1
+        else if node_metadata['type'] == 'directory':
+            out.st_mode = stat.S_IFDIR | 0o600
+            out.st_nlink = 2
+            # Fill st_nlink
+            dir_info = fetch_dir_from_cache("hashfs", node_metadata['cksum'])
+            for child, child_info in dir_info.items():
+                if child_info['type'] == 'directory':
+                    out.st_nlink += 1
+
+        out.st_size = os.path.getsize("/tmp/mkfs/hashfs/{}".format(node_metadata['cksum']))
 
         return out
 
@@ -158,19 +186,27 @@ class HashFS(Fuse):
         #for e in SOMETHING:
         #    yield fuse.Direntry(e)
 
-    def open(self, path, flags, *mode):
+    def open(self, path, flags):
         #TODO get ready to use a file
         # should (sometimes) check for existence of path and return
         # -errno.ENOENT if it's missing.
         # this call has a lot of variations and edge cases, so don't worry too
         # much about getting things perfect on the first pass.
-        node = get_node_by_path("hashfs", self.root, path.split("/"), [])
+        print("blah")
+        _, node = get_node_by_path("hashfs", self.root, path.split("/"), list([('/', self.root)]))
         if node is None:
             return -errno.ENOENT
-        return os.open(node.node_cksum, "r+b") # open for read+write without truncation as binary file
 
-    def read(self, path, length, offset, fh):
-        return os.pread(fh, length, offset)
+    def read(self, path, length, offset):
+        _, node = get_node_by_path("hashfs", self.root, path.split("/"), list([('/', self.root)]))
+        if node is None:
+            return -errno.ENOENT
+
+        with open('/tmp/mkfs/hashfs/{}'.format(node.node_cksum), "r") as f:
+            f.seek(offset, 1)
+            buf = f.read(length)
+
+        return buf
 
     def write(self, path, buf, offset):
         raise NotImplementedError

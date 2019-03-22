@@ -34,6 +34,8 @@ def validateDirectory(dirPath):
         try:
             if not os.path.isdir(dirPath):
                 os.makedirs(dirPath)
+                with open(dirPath+"/a", "w") as f:
+                    f.write("{}")
         except OSError as error:
             return -1
     return dirPath
