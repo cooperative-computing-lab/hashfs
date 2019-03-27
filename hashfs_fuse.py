@@ -83,7 +83,40 @@ class HashFS(Fuse):
         out.st_mtime = 0
         out.st_ctime = 0
 
+        if path == '/':
+            out.st_mode = stat.S_IFDIR | 0o600
+            out.st_nlink = 2
+            dir_info = fetch_dir_info_from_cache("hashfs", self.root)
+            for child, child_info in dir_info.items():
+                if child_info['type'] == 'directory':
+                    out.st_nlink += 1
+            out.st_size = os.path.getsize("/tmp/mkfs/hashfs/{}".format(self.root))
+            return out
+
         # Get metadata for the node
+        if path[0] == '/':
+            path = path[1:]
+        if len(path.split('/')) == 1:
+            parent_dir_info = fetch_dir_info_from_cache("hashfs", self.root)
+            node_metadata = parent_dir_info[path.split('/')[-1]]
+
+            if node_metadata['type'] == 'file':
+                out.st_mode = stat.S_IFREG | 0o700
+                out.st_nlink = 1
+            elif node_metadata['type'] == 'directory':
+                out.st_mode = stat.S_IFDIR | 0o600
+                out.st_nlink = 2
+                # Fill st_nlink
+                dir_info = fetch_dir_info_from_cache("hashfs", node_metadata['cksum'])
+                for child, child_info in dir_info.items():
+                    if child_info['type'] == 'directory':
+                        out.st_nlink += 1
+
+            out.st_size = os.path.getsize("/tmp/mkfs/hashfs/{}".format(node_metadata['cksum']))
+
+            return out
+            
+
         _, parent_node = get_node_by_path("hashfs", self.root, path.split("/")[:-1], list([('/', self.root)]))
         _, node = get_node_by_path("hashfs", self.root, path.split('/'), list([('/', self.root)]))
 
@@ -91,16 +124,16 @@ class HashFS(Fuse):
             return -errno.ENOENT
 
         parent_dir_info = fetch_dir_info_from_cache("hashfs", parent_node.node_cksum)
-        node_metadata = parent_dir_info[path.split('/')[-1]
+        node_metadata = parent_dir_info[path.split('/')[-1]]
 
         if node_metadata['type'] == 'file':
             out.st_mode = stat.S_IFREG | 0o700
             out.st_nlink = 1
-        else if node_metadata['type'] == 'directory':
+        elif node_metadata['type'] == 'directory':
             out.st_mode = stat.S_IFDIR | 0o600
             out.st_nlink = 2
             # Fill st_nlink
-            dir_info = fetch_dir_from_cache("hashfs", node_metadata['cksum'])
+            dir_info = fetch_dir_info_from_cache("hashfs", node_metadata['cksum'])
             for child, child_info in dir_info.items():
                 if child_info['type'] == 'directory':
                     out.st_nlink += 1
@@ -179,12 +212,28 @@ class HashFS(Fuse):
         # if it's not a directory
 
     def readdir(self, path, offset):
-        raise NotImplementedError
-
         #TODO list directory contents
         # should look something like
         #for e in SOMETHING:
         #    yield fuse.Direntry(e)
+        dest_path = mkfs.clean_path(dest_path)
+        _, node = mkfs.get_node_by_path(fs, root_cksum, dest_path.split('/'), list([('/', root_cksum)]))
+
+        """
+        if node == None:
+            print("The path doesn't exist")
+            return -errno.ENOENT
+
+        # Check if node is a directory
+        if node.node_type != "directory":
+            print("{} is not a directory".format(dest_path))
+            return -errno.ENOENT
+        """
+
+        # Open dir_node and list files
+        dir_contents = fetch_dir_info_from_cache("hashfs", node.node_cksum)
+        for name in '.', '..', dir_contents.keys():
+            yield fuse.Direntry(name)
 
     def open(self, path, flags):
         #TODO get ready to use a file
@@ -192,7 +241,7 @@ class HashFS(Fuse):
         # -errno.ENOENT if it's missing.
         # this call has a lot of variations and edge cases, so don't worry too
         # much about getting things perfect on the first pass.
-        print("blah")
+
         _, node = get_node_by_path("hashfs", self.root, path.split("/"), list([('/', self.root)]))
         if node is None:
             return -errno.ENOENT
