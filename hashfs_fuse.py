@@ -4,7 +4,7 @@ import os, sys
 import errno
 import stat
 import fcntl
-from hashfs.hashfs_core import HashFS
+from hashfs.hashfs_core import HashFS as HashFS_Core
 
 # from examples in libfuse/python-fuse
 # pull in some spaghetti to make this stuff work without fuse-py being installed
@@ -56,7 +56,7 @@ class HashFS(Fuse):
 
         #FIXME set up a default root
         self.root = 'a'
-        self.fs = HashFS()
+        self.fs = HashFS_Core()
         # probably want to update this with each change to point to the
         # current FS root
 
@@ -74,7 +74,7 @@ class HashFS(Fuse):
         #       target, directory listing, etc.)
         # - st_nlink: should be 1 for files, 2 + the number of immediate
         #       subdirectories for directories
-
+        print "1"
         out = fuse.Stat()
         out.st_uid = os.getuid()
         out.st_gid = os.getgid()
@@ -83,17 +83,18 @@ class HashFS(Fuse):
         out.st_atime = 0
         out.st_mtime = 0
         out.st_ctime = 0
-
+        print "1.5"
         if path == '/':
             out.st_mode = stat.S_IFDIR | 0o600
             out.st_nlink = 2
             dir_info = self.fs.fetch_dir_info_from_cache(self.root)
+            print "1.75"
             for child, child_info in dir_info.items():
                 if child_info['type'] == 'directory':
                     out.st_nlink += 1
             out.st_size = os.path.getsize("/tmp/mkfs/{}".format(self.root))
             return out
-
+        print "2"
         # Get metadata for the node
         if path[0] == '/':
             path = path[1:]
@@ -207,34 +208,36 @@ class HashFS(Fuse):
         return out
 
     def opendir(self, path):
-        raise NotImplementedError
+        #raise NotImplementedError
         #TODO any prep work 
         # should return -errno.ENOENT if path doesn't exist, -errno.ENOTDIR
         # if it's not a directory
+        dest_path = self.fs.clean_path(path)
+        _, node = self.fs.get_node_by_path(self.root, dest_path.split('/'), list([('/', self.root)]))
+
+        if node == None:
+            print("The path doesn't exist")
+            return -errno.ENOENT
+
+        if node.node_type != "directory":
+            print("{} is not a directory".format(dest_path))
+            return -errno.ENOTDIR
 
     def readdir(self, path, offset):
         #TODO list directory contents
         # should look something like
         #for e in SOMETHING:
         #    yield fuse.Direntry(e)
-        dest_path = mkfs.clean_path(dest_path)
-        _, node = mkfs.get_node_by_path(fs, root_cksum, dest_path.split('/'), list([('/', root_cksum)]))
 
-        """
-        if node == None:
-            print("The path doesn't exist")
-            return -errno.ENOENT
-
-        # Check if node is a directory
-        if node.node_type != "directory":
-            print("{} is not a directory".format(dest_path))
-            return -errno.ENOENT
-        """
+        # get node from path, if it doesn't exist or is not a directory, opendir would have failed
+        dest_path = self.fs.clean_path(path)
+        _, node = self.fs.get_node_by_path(self.root, dest_path.split('/'), list([('/', self.root)]))
 
         # Open dir_node and list files
-        dir_contents = fetch_dir_info_from_cache("hashfs", node.node_cksum)
+        dir_contents = self.fs.fetch_dir_info_from_cache(node.node_cksum)
         for name in '.', '..', dir_contents.keys():
             yield fuse.Direntry(name)
+
 
     def open(self, path, flags):
         #TODO get ready to use a file
