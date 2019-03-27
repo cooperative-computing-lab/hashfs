@@ -4,7 +4,7 @@ import os, sys
 import errno
 import stat
 import fcntl
-from hashfs.mkfs_core import get_node_by_path, Node, fetch_dir_info_from_cache
+from hashfs.hashfs_core import HashFS
 
 # from examples in libfuse/python-fuse
 # pull in some spaghetti to make this stuff work without fuse-py being installed
@@ -56,6 +56,7 @@ class HashFS(Fuse):
 
         #FIXME set up a default root
         self.root = 'a'
+        self.fs = HashFS()
         # probably want to update this with each change to point to the
         # current FS root
 
@@ -86,19 +87,19 @@ class HashFS(Fuse):
         if path == '/':
             out.st_mode = stat.S_IFDIR | 0o600
             out.st_nlink = 2
-            dir_info = fetch_dir_info_from_cache("hashfs", self.root)
+            dir_info = self.fs.fetch_dir_info_from_cache(self.root)
             for child, child_info in dir_info.items():
                 if child_info['type'] == 'directory':
                     out.st_nlink += 1
-            out.st_size = os.path.getsize("/tmp/mkfs/hashfs/{}".format(self.root))
+            out.st_size = os.path.getsize("/tmp/mkfs/{}".format(self.root))
             return out
 
         # Get metadata for the node
         if path[0] == '/':
             path = path[1:]
         if len(path.split('/')) == 1:
-            parent_dir_info = fetch_dir_info_from_cache("hashfs", self.root)
-            node_metadata = parent_dir_info[path.split('/')[-1]]
+            parent_dir_info = self.fs.fetch_dir_info_from_cache(self.root)
+            node_metadata = self.fs.parent_dir_info[path.split('/')[-1]]
 
             if node_metadata['type'] == 'file':
                 out.st_mode = stat.S_IFREG | 0o700
@@ -107,24 +108,24 @@ class HashFS(Fuse):
                 out.st_mode = stat.S_IFDIR | 0o600
                 out.st_nlink = 2
                 # Fill st_nlink
-                dir_info = fetch_dir_info_from_cache("hashfs", node_metadata['cksum'])
+                dir_info = self.fs.fetch_dir_info_from_cache(node_metadata['cksum'])
                 for child, child_info in dir_info.items():
                     if child_info['type'] == 'directory':
                         out.st_nlink += 1
 
-            out.st_size = os.path.getsize("/tmp/mkfs/hashfs/{}".format(node_metadata['cksum']))
+            out.st_size = os.path.getsize("/tmp/mkfs/{}".format(node_metadata['cksum']))
 
             return out
             
 
-        _, parent_node = get_node_by_path("hashfs", self.root, path.split("/")[:-1], list([('/', self.root)]))
-        _, node = get_node_by_path("hashfs", self.root, path.split('/'), list([('/', self.root)]))
+        _, parent_node = self.fs.get_node_by_path(self.root, path.split("/")[:-1], list([('/', self.root)]))
+        _, node = self.fs.get_node_by_path(self.root, path.split('/'), list([('/', self.root)]))
 
         if parent_node is None or node is None:
             return -errno.ENOENT
 
-        parent_dir_info = fetch_dir_info_from_cache("hashfs", parent_node.node_cksum)
-        node_metadata = parent_dir_info[path.split('/')[-1]]
+        parent_dir_info = self.fs.fetch_dir_info_from_cache(parent_node.node_cksum)
+        node_metadata = self.fs.parent_dir_info[path.split('/')[-1]]
 
         if node_metadata['type'] == 'file':
             out.st_mode = stat.S_IFREG | 0o700
@@ -133,12 +134,12 @@ class HashFS(Fuse):
             out.st_mode = stat.S_IFDIR | 0o600
             out.st_nlink = 2
             # Fill st_nlink
-            dir_info = fetch_dir_info_from_cache("hashfs", node_metadata['cksum'])
+            dir_info = self.fs.fetch_dir_info_from_cache(node_metadata['cksum'])
             for child, child_info in dir_info.items():
                 if child_info['type'] == 'directory':
                     out.st_nlink += 1
 
-        out.st_size = os.path.getsize("/tmp/mkfs/hashfs/{}".format(node_metadata['cksum']))
+        out.st_size = os.path.getsize("/tmp/mkfs/{}".format(node_metadata['cksum']))
 
         return out
 
@@ -242,16 +243,16 @@ class HashFS(Fuse):
         # this call has a lot of variations and edge cases, so don't worry too
         # much about getting things perfect on the first pass.
 
-        _, node = get_node_by_path("hashfs", self.root, path.split("/"), list([('/', self.root)]))
+        _, node = self.fs.get_node_by_path(self.root, path.split("/"), list([('/', self.root)]))
         if node is None:
             return -errno.ENOENT
 
     def read(self, path, length, offset):
-        _, node = get_node_by_path("hashfs", self.root, path.split("/"), list([('/', self.root)]))
+        _, node = self.fs.get_node_by_path(self.root, path.split("/"), list([('/', self.root)]))
         if node is None:
             return -errno.ENOENT
 
-        with open('/tmp/mkfs/hashfs/{}'.format(node.node_cksum), "r") as f:
+        with open('/tmp/mkfs/{}'.format(node.node_cksum), "r") as f:
             f.seek(offset, 1)
             buf = f.read(length)
 

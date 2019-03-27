@@ -6,7 +6,6 @@ import tempfile
 from caching.CacheLib import CacheLib
 
 
-c = CacheLib("localhost:9999")
 
 class HashFS:
     def __init__(self, fs = "dummy", parent_node = "localhost:9999"):
@@ -55,7 +54,7 @@ class HashFS:
 
     # root_node: cksum of root directories to begin search from
     # TODO: Check if node is directory when traversing
-    def get_node_by_path(self, root_node, path_list, nodes_traversed):
+    def get_node_by_path(self, root_node, path_list, nodes_traversed = None):
         """Traverse merkle tree and fetch the node by path
 
         Starting from the root_node, traverse the merkle tree until the node is found or
@@ -72,6 +71,9 @@ class HashFS:
             str : the name of the node found (None if an error occured)
             str : the cksum of the node found (None if an error occured)
         """
+        if nodes_traversed is None:
+            nodes_traversed = list([('/', root_node)])
+
         cache_dir = "{}/mkfs".format(tempfile.gettempdir())
 
         # Open directory_file and traverse
@@ -230,6 +232,8 @@ class HashFS:
 
     # Since every path needs to be absolute path from root, remove leading /
     def clean_path(self, path):
+        #if path[0] != '/':
+        #    return "/{}".format(path)
         if path[0] == '/':
             return path[1:]
         
