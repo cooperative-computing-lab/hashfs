@@ -1,5 +1,4 @@
 from __future__ import print_function
-import hashfs.mkfs_core as mkfs
 from hashfs.get import GET
 from hashfs.put import PUT
 from hashfs.ls import LS
@@ -16,7 +15,6 @@ def usage():
 
 
 if __name__ == "__main__":
-    fs = "hashfs"
     root_cksum = raw_input("Enter root checksum: ")
 
     new_cksums = list([root_cksum])
@@ -31,13 +29,13 @@ if __name__ == "__main__":
             if len(args) != 2:
                 usage()
                 continue
-            GET(fs, args[0], args[1], root_cksum)
+            GET(args[0], args[1], root_cksum)
 
         elif op == "PUT":
             if len(args) != 2:
                 usage()
                 continue
-            temp = PUT(fs, args[0], args[1], root_cksum)
+            temp = PUT(args[0], args[1], root_cksum)
             if temp != "Unsuccessful":
                 root_cksum = temp
                 new_cksums.append(root_cksum)
@@ -46,13 +44,13 @@ if __name__ == "__main__":
             if len(args) != 1:
                 usage()
                 continue
-            LS(fs, args[0], root_cksum)
+            LS(args[0], root_cksum)
 
         elif op == "MKDIR":
             if len(args) != 1:
                 usage()
                 continue
-            temp = MKDIR(fs, args[0], root_cksum)
+            temp = MKDIR(args[0], root_cksum)
             if temp != "Unsuccessful":
                 root_cksum = temp
                 new_cksums.append(root_cksum)
@@ -61,7 +59,7 @@ if __name__ == "__main__":
             if len(args) != 1:
                 usage()
                 continue
-            temp = DELETE(fs, args[0], root_cksum)
+            temp = DELETE(args[0], root_cksum)
             if temp != "Unsuccessful":
                 root_cksum = temp
                 new_cksums.append(root_cksum)
