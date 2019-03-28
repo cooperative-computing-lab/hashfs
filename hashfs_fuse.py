@@ -214,8 +214,13 @@ class HashFS(Fuse):
         # Open dir_node and list files
         dir_contents = self.fs.fetch_dir_info_from_cache(node.node_cksum)
         print(dir_contents)
-        for name in '.', '..', dir_contents.keys():
-            yield fuse.Direntry(name)
+        print(dir_contents.keys())
+        all_dirs = ['.','..']
+        all_dirs.extend(dir_contents.keys())
+        for name in all_dirs:
+            print name
+            print type(name)
+            yield fuse.Direntry(str(name))
 
 
     def open(self, path, flags):
