@@ -74,7 +74,6 @@ class HashFS(Fuse):
         #       target, directory listing, etc.)
         # - st_nlink: should be 1 for files, 2 + the number of immediate
         #       subdirectories for directories
-        print "1"
         out = fuse.Stat()
         out.st_uid = os.getuid()
         out.st_gid = os.getgid()
@@ -83,50 +82,31 @@ class HashFS(Fuse):
         out.st_atime = 0
         out.st_mtime = 0
         out.st_ctime = 0
-        print "1.5"
+
         if path == '/':
             out.st_mode = stat.S_IFDIR | 0o600
             out.st_nlink = 2
+            # Fill st_nlink
             dir_info = self.fs.fetch_dir_info_from_cache(self.root)
-            print "1.75"
             for child, child_info in dir_info.items():
                 if child_info['type'] == 'directory':
                     out.st_nlink += 1
+
             out.st_size = os.path.getsize("/tmp/mkfs/{}".format(self.root))
-            return out
-        print "2"
-        # Get metadata for the node
-        if path[0] == '/':
-            path = path[1:]
-        if len(path.split('/')) == 1:
-            parent_dir_info = self.fs.fetch_dir_info_from_cache(self.root)
-            node_metadata = self.fs.parent_dir_info[path.split('/')[-1]]
-
-            if node_metadata['type'] == 'file':
-                out.st_mode = stat.S_IFREG | 0o700
-                out.st_nlink = 1
-            elif node_metadata['type'] == 'directory':
-                out.st_mode = stat.S_IFDIR | 0o600
-                out.st_nlink = 2
-                # Fill st_nlink
-                dir_info = self.fs.fetch_dir_info_from_cache(node_metadata['cksum'])
-                for child, child_info in dir_info.items():
-                    if child_info['type'] == 'directory':
-                        out.st_nlink += 1
-
-            out.st_size = os.path.getsize("/tmp/mkfs/{}".format(node_metadata['cksum']))
 
             return out
+
+        # Get path to the parent directory of the target file/directory
+        parent_path = '/'.join(path.strip('/').split('/')[:-1])
+        parent_path = '/'+parent_path
+        _, parent_node = self.fs.get_node_by_path(self.root, parent_path)
+        _, node = self.fs.get_node_by_path(self.root, path)
             
-
-        _, parent_node = self.fs.get_node_by_path(self.root, path.split("/")[:-1], list([('/', self.root)]))
-        _, node = self.fs.get_node_by_path(self.root, path.split('/'), list([('/', self.root)]))
-
         if parent_node is None or node is None:
             return -errno.ENOENT
 
         parent_dir_info = self.fs.fetch_dir_info_from_cache(parent_node.node_cksum)
-        node_metadata = self.fs.parent_dir_info[path.split('/')[-1]]
+        node_metadata = parent_dir_info[path.split('/')[-1]]
 
         if node_metadata['type'] == 'file':
             out.st_mode = stat.S_IFREG | 0o700
@@ -212,15 +192,14 @@ class HashFS(Fuse):
         #TODO any prep work 
         # should return -errno.ENOENT if path doesn't exist, -errno.ENOTDIR
         # if it's not a directory
-        dest_path = self.fs.clean_path(path)
-        _, node = self.fs.get_node_by_path(self.root, dest_path.split('/'), list([('/', self.root)]))
+        _, node = self.fs.get_node_by_path(self.root, path)
 
         if node == None:
             print("The path doesn't exist")
             return -errno.ENOENT
 
         if node.node_type != "directory":
-            print("{} is not a directory".format(dest_path))
+            print("{} is not a directory".format(path))
             return -errno.ENOTDIR
 
     def readdir(self, path, offset):
@@ -230,11 +209,11 @@ class HashFS(Fuse):
         #    yield fuse.Direntry(e)
 
         # get node from path, if it doesn't exist or is not a directory, opendir would have failed
-        dest_path = self.fs.clean_path(path)
-        _, node = self.fs.get_node_by_path(self.root, dest_path.split('/'), list([('/', self.root)]))
+        _, node = self.fs.get_node_by_path(self.root, path)
 
         # Open dir_node and list files
         dir_contents = self.fs.fetch_dir_info_from_cache(node.node_cksum)
+        print(dir_contents)
         for name in '.', '..', dir_contents.keys():
             yield fuse.Direntry(name)
 
@@ -246,12 +225,12 @@ class HashFS(Fuse):
         # this call has a lot of variations and edge cases, so don't worry too
         # much about getting things perfect on the first pass.
 
-        _, node = self.fs.get_node_by_path(self.root, path.split("/"), list([('/', self.root)]))
+        _, node = self.fs.get_node_by_path(self.root, path)
         if node is None:
             return -errno.ENOENT
 
     def read(self, path, length, offset):
-        _, node = self.fs.get_node_by_path(self.root, path.split("/"), list([('/', self.root)]))
+        _, node = self.fs.get_node_by_path(self.root, path)
         if node is None:
             return -errno.ENOENT
 
