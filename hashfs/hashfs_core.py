@@ -52,25 +52,64 @@ class HashFS:
         cksum = self.parent.put(local_name, "sha256")
         #self.parent.push(cksum, "sha256")
 
-    # root_node: cksum of root directories to begin search from
-    # TODO: Check if node is directory when traversing
-    def get_node_by_path(self, root_node, path_list, nodes_traversed = None):
+
+    def get_node_by_path(self, root_node, path, nodes_traversed = None):
         """Traverse merkle tree and fetch the node by path
 
         Starting from the root_node, traverse the merkle tree until the node is found or
         an error has occured
 
         Args:
-            fs              (str) : name of the file system instance
             root_node       (str) : the cksum of the root_node to traversed from
-            path_list       (list): the pathname list
+            path            (str) : the pathname
             nodes_traversed (list): the list to keep track of nodes traversed
 
         Returns:
             list: the list of nodes traversed including root
-            str : the name of the node found (None if an error occured)
-            str : the cksum of the node found (None if an error occured)
+            Node: Node structure containing the information on the node. None if an error
+                  has occured
         """
+        if path == '/':
+            return list(), self.Node('/', root_node, 'directory')
+
+        if nodes_traversed is None:
+            nodes_traversed = [('/', root_node)]
+
+        if path[0] == '/': 
+            path = path[1:]
+
+        path_list = path.split('/')
+
+        # Open directory file
+        dir_content = self.fetch_dir_info_from_cache(root_node)
+
+        sub_node = dir_content.get(path_list[0])
+        if sub_node == None: # path's immediate directory/file doesn't exist
+            #full_path = '/'.join([x[0] for x in nodes_traversed])
+            #print("The path {} doesn't exist".format(full_path))
+            return nodes_traversed, None
+        
+        # If node is found, make sure it's cached locally and return
+        if len(path_list) == 1:
+            if self.load_node_to_cache(sub_node['cksum']) == False:
+                print("The node {} doesn't exist in parent".format(sub_node['cksum']))
+                return nodes_traversed, None
+            return nodes_traversed, self.Node(sub_node['name'], sub_node['cksum'], sub_node['type'])
+        
+        # Check if sub_node is directory
+        if sub_node['type'] == 'directory':
+            nodes_traversed.append((path_list[0], sub_node['cksum']))
+            return self.get_node_by_path(sub_node['cksum'], '/'.join(path_list[1:]), nodes_traversed)
+        else:
+            fullpath = "/".join([x[0] for x in nodes_traversed])
+            print("{} is not a directory".format(fullpath))
+            return nodes_traversed, None
+
+
+    """
+    # root_node: cksum of root directories to begin search from
+    # TODO: Check if node is directory when traversing
+    def get_node_by_path(self, root_node, path_list, nodes_traversed = None):
         if nodes_traversed is None:
             nodes_traversed = list([('/', root_node)])
 
@@ -100,14 +139,14 @@ class HashFS:
             fullpath = "{}".format("/".join([x[0] for x in nodes_traversed[1:]]))
             print("{} is not a directory".format(fullpath))
             return nodes_traversed, None
+    """
 
-    def put_file_bubble_up(self, src_path, dest_path, nodes_traversed):
+    def put_file_bubble_up(self, src_path, file_name, nodes_traversed):
         """Put file into the file system and bubble up the merkle tree
 
         Args:
-            fs              (str) : name of the file system instance
             src_path        (str) : source of file to be placed in the file system
-            dest_path       (list): the path list to place the file at
+            file_name       (list): name of the file at destination
             nodes_traversed (list): the list to keep track of nodes traversed
 
         Return:
@@ -116,8 +155,8 @@ class HashFS:
         # Check that the new file doesn't collide with existing files/directories
         # in the containing directory
         dir_data = self.fetch_dir_info_from_cache(nodes_traversed[-1][1])
-        if dir_data.get(dest_path[-1]) != None and dir_data[dest_path[-1]]['type'] != 'file':
-            print("Attempting to overwrite directory {} as a file".format(dest_path))
+        if dir_data.get(file_name) != None and dir_data[file_name]['type'] != 'file':
+            print("Attempting to overwrite directory {} as a file".format(file_name))
             return "Failed"
 
         # Put file named as the cksum
@@ -125,7 +164,7 @@ class HashFS:
         self.put_file_to_parent(file_cksum, src_path)
 
         # Bubble up on existing directories
-        curr_cksum = self.bubble_up_existing_dir(nodes_traversed, dest_path[-1], file_cksum, "file")
+        curr_cksum = self.bubble_up_existing_dir(nodes_traversed, file_name, file_cksum, "file")
 
         return curr_cksum
 

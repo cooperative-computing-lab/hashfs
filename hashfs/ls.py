@@ -7,17 +7,9 @@ import tempfile
 def LS(dest_path, root_cksum):
     fs = HashFS()
 
-    if dest_path == '/':
-        node = fs.Node('/', root_cksum, "directory")
-        if fs.load_node_to_cache(node.node_cksum) == False:
-            print("Invalid root: {}".format(root_cksum))
-            return
-    else:
-        dest_path = fs.clean_path(dest_path)
-        _, node = fs.get_node_by_path(root_cksum, dest_path.split('/'), list([('/', root_cksum)]))
-
+    _, node = fs.get_node_by_path(root_cksum, dest_path)
     if node == None:
-        print("The path doesn't exist")
+        print("The path does't exist")
         return
 
     # Check if node is a directory

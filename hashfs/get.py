@@ -7,8 +7,7 @@ import tempfile
 
 def GET(src_path, dest_path, root_cksum):
     fs = HashFS()
-    src_path = fs.clean_path(src_path)
-    _, node = fs.get_node_by_path(root_cksum, src_path.split('/'), list([('/', root_cksum)]))
+    _, node = fs.get_node_by_path(root_cksum, src_path)
 
     if node == None:
         return False

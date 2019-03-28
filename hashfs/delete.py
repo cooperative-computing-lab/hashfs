@@ -5,10 +5,7 @@ import sys
 def DELETE(dest_path, root_cksum):
     fs = HashFS()
 
-    dest_path = fs.clean_path(dest_path)
-
-    nodes_traversed = list([('/', root_cksum)])
-    nodes_traversed, node = fs.get_node_by_path(root_cksum, dest_path.split('/'), nodes_traversed)
+    nodes_traversed, node = fs.get_node_by_path(root_cksum, dest_path)
 
     if node.node_cksum is None:
         print("Cannot delete {}".format(dest_path))
