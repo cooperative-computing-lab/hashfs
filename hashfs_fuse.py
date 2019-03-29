@@ -146,12 +146,27 @@ class HashFS(Fuse):
         # there are some edge cases when moving a directory, but it's not
         # critical to get those right in a first pass
 
+    # TODO: handle make_directory error
     def mkdir(self, path, mode):
-        raise NotImplementedError
         #TODO make an empty directory
         # should return -errno.EEXIST if there's already something at path
         # should only create the *last* component, i.e. not like mkdir -p
         # if any parent directory is missing, should return -errno.ENOENT
+        new_dir = path.split('/')[-1]
+        parent_path = '/'.join(path.strip('/').split('/')[:-1])
+        parent_path = '/'+parent_path
+        nodes_traversed, parent_node = self.fs.get_node_by_path(self.root, parent_path)
+
+        if parent_node is None:
+            return -errno.ENOENT
+
+        parent_dirinfo = self.fs.fetch_dir_info_from_cache(parent_node.node_cksum)
+        if parent_dirinfo.get(new_dir) is not None:
+            return -errno.EEXIST
+
+        nodes_traversed.append((parent_node.node_name, parent_node.node_cksum))
+
+        self.root = self.fs.make_directory(new_dir, nodes_traversed)
 
     def utime(self, path, times):
         # silently ignore
@@ -166,6 +181,9 @@ class HashFS(Fuse):
         #TODO since we're not enforcing permissions, it's OK to just check
         # for existence and do nothing. If path doesn't exist, should
         # return -errno.ENOENT
+
+    def chmod(self, path, mode):
+        pass
 
     def statfs(self):
         out = fuse.StatVFS()
@@ -213,13 +231,9 @@ class HashFS(Fuse):
 
         # Open dir_node and list files
         dir_contents = self.fs.fetch_dir_info_from_cache(node.node_cksum)
-        print(dir_contents)
-        print(dir_contents.keys())
         all_dirs = ['.','..']
         all_dirs.extend(dir_contents.keys())
         for name in all_dirs:
-            print name
-            print type(name)
             yield fuse.Direntry(str(name))
 
 
