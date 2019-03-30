@@ -56,6 +56,7 @@ class HashFS(Fuse):
 
         #FIXME set up a default root
         self.root = 'a'
+        self.local_cache_dir = '/tmp/mkfs'
         self.fs = HashFS_Core()
         # probably want to update this with each change to point to the
         # current FS root
@@ -92,7 +93,7 @@ class HashFS(Fuse):
                 if child_info['type'] == 'directory':
                     out.st_nlink += 1
 
-            out.st_size = os.path.getsize("/tmp/mkfs/{}".format(self.root))
+            out.st_size = os.path.getsize("{}/{}".format(self.local_cache_dir, self.root))
 
             return out
 
@@ -120,7 +121,7 @@ class HashFS(Fuse):
                 if child_info['type'] == 'directory':
                     out.st_nlink += 1
 
-        out.st_size = os.path.getsize("/tmp/mkfs/{}".format(node_metadata['cksum']))
+        out.st_size = os.path.getsize("{}/{}".format(self.local_cache_dir, node_metadata['cksum']))
 
         return out
 
@@ -135,9 +136,25 @@ class HashFS(Fuse):
         # should return -errno.EISDIR if path is a directory
 
     def rmdir(self, path):
-        raise NotImplementedError
         #TODO remove an *empty* directory
         # should return -errno.ENOTEMPTY if there's anything in the directory
+        nodes_traversed, node = self.fs.get_node_by_path(self.root, path)
+
+        if node == None:
+            print("The path doesn't exist")
+            return -errno.ENOENT
+
+        if node.node_type != "directory":
+            print("{} is not a directory".format(path))
+            return -errno.ENOTDIR
+
+        dir_info = self.fs.fetch_dir_info_from_cache(node.node_cksum)
+        if dir_info is None:
+            print("{} is not an empty directory".format(path))
+            return -errno.ENOTEMPTY
+
+        dir_name = path.split('/')[-1]
+        self.root = self.fs.delete_node_bubble_up(dir_name, node.node_cksum, nodes_traversed)
 
     def rename(self, src, dst):
         raise NotImplementedError
@@ -253,7 +270,7 @@ class HashFS(Fuse):
         if node is None:
             return -errno.ENOENT
 
-        with open('/tmp/mkfs/{}'.format(node.node_cksum), "r") as f:
+        with open('{}/{}'.format(self.local_cache_dir, node.node_cksum), "r") as f:
             f.seek(offset, 1)
             buf = f.read(length)
 
@@ -279,7 +296,15 @@ def main():
 
     server.parser.add_option(mountopt="root", metavar="HASH", default='a',
                              help="Specify a root hash [default: %default]")
+    server.parser.add_option(mountopt="local_cache_dir", metavar="DIR", default='/tmp/mkfs',
+                             help="Specify a local cache directory [default: %default]")
     server.parse(values=server, errex=1)
+    print(server.local_cache_dir)
+    if not os.path.isdir(server.local_cache_dir):
+        print("{} is not a directory")
+        sys.exit()
+    if server.local_cache_dir[-1] == '/':
+        server.local_cache_dir = server.local_cache_dir[:-1]
 
     server.main()
 
