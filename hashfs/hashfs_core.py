@@ -5,12 +5,11 @@ import hashlib
 import tempfile
 from caching.CacheLib import CacheLib
 
-
-
 class HashFS:
-    def __init__(self, fs = "dummy", parent_node = "localhost:9999"):
+    def __init__(self, fs = "dummy", parent_node = "localhost:9999", local_cache_dir = "/tmp/mkfs"):
         self.fs = fs
         self.parent = CacheLib(parent_node)
+        self.local_cache_dir = local_cache_dir
 
     class Node:
         def __init__(self, node_name, node_cksum, node_type):
@@ -18,10 +17,10 @@ class HashFS:
             self.node_cksum = node_cksum
             self.node_type = node_type
 
-    # Get file from bucket and save file in /tmp/mkfs/<fs>/
+    # Get file from bucket and save file in local_cache_dir
     # Returns True if successful, False if unsuccessful
     def get_file_from_parent(self, object_name):
-        """Get file from parent and save file in /tmp/mkfs/<fs>/
+        """Get file from parent and save file in local_cache_dir
 
         Args:
             fs          (str): name of the file system instance
@@ -31,16 +30,15 @@ class HashFS:
             bool: True for success, False for otherwise
         """
 
-        # Check if /tmp/mkfs/<fs>/ exists
-        local_cache_dir = "{}/mkfs".format(tempfile.gettempdir())
-        if not os.path.isdir(local_cache_dir):
+        # Check if local_cache_dir exists
+        if not os.path.isdir(self.local_cache_dir):
             try:
-                os.makedirs(local_cache_dir)
+                os.makedirs(self.local_cache_dir)
             except os.error:
-                print("Cannot create {}".format(local_cache_dir))
+                print("Cannot create {}".format(self.local_cache_dir))
                 return False
 
-        if self.parent.get(object_name, "sha256", local_cache_dir) != 0:
+        if self.parent.get(object_name, "sha256", self.local_cache_dir) != 0:
             print("Failed to get file from parent")
             return False
 
