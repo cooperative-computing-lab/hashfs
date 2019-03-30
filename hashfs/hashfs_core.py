@@ -2,7 +2,6 @@ from __future__ import print_function
 import os
 import json
 import hashlib
-import tempfile
 from caching.CacheLib import CacheLib
 
 class HashFS:
@@ -221,23 +220,19 @@ class HashFS:
 
 
     def load_node_to_cache(self, cksum):
-        cache_dir = "{}/mkfs".format(tempfile.gettempdir())
-        
-        if not os.path.isdir(cache_dir):
-            os.makedirs(cache_dir)
+        if not os.path.isdir(self.local_cache_dir):
+            os.makedirs(self.local_cache_dir)
 
-        if not os.path.exists("{}/{}".format(cache_dir, cksum)) and not self.get_file_from_parent(cksum):
+        if not os.path.exists("{}/{}".format(self.local_cache_dir, cksum)) and not self.get_file_from_parent(cksum):
             return False
 
         return True
 
     def put_dir_info_in_cache(self, cksum, data):
-        cache_dir = "{}/mkfs".format(tempfile.gettempdir())
+        if not os.path.isdir(self.local_cache_dir):
+            os.makedirs(self.local_cache_dir)
 
-        if not os.path.isdir(cache_dir):
-            os.makedirs(cache_dir)
-
-        cache_node_path = "{}/{}".format(cache_dir, cksum)
+        cache_node_path = "{}/{}".format(self.local_cache_dir, cksum)
         with open(cache_node_path, "w+") as df:
             json.dump(data, df)
 
@@ -247,8 +242,7 @@ class HashFS:
         if self.load_node_to_cache(dir_cksum) == False:
             return None
 
-        cache_dir = "{}/mkfs".format(tempfile.gettempdir())
-        with open("{}/{}".format(cache_dir, dir_cksum), "r") as df:
+        with open("{}/{}".format(self.local_cache_dir, dir_cksum), "r") as df:
             data = json.load(df)
 
         return data

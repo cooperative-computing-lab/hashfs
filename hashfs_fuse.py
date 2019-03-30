@@ -57,7 +57,7 @@ class HashFS(Fuse):
         #FIXME set up a default root
         self.root = 'a'
         self.local_cache_dir = '/tmp/mkfs'
-        self.fs = HashFS_Core()
+        self.fs = HashFS_Core() # this gets overwritten in main()
         # probably want to update this with each change to point to the
         # current FS root
 
@@ -299,12 +299,13 @@ def main():
     server.parser.add_option(mountopt="local_cache_dir", metavar="DIR", default='/tmp/mkfs',
                              help="Specify a local cache directory [default: %default]")
     server.parse(values=server, errex=1)
-    print(server.local_cache_dir)
+
     if not os.path.isdir(server.local_cache_dir):
         print("{} is not a directory")
         sys.exit()
     if server.local_cache_dir[-1] == '/':
         server.local_cache_dir = server.local_cache_dir[:-1]
+    server.fs = HashFS_Core(local_cache_dir=server.local_cache_dir)
 
     server.main()
 
