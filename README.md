@@ -45,4 +45,4 @@ The easiest fix is to set `RPATH` when installing.
 
 To run the FUSE module,
 
-    ./hashfs_fuse -o root=<HASH> <MOUNTPOINT>
+    ./hashfs_fuse -o root=<HASH> -o local_cache_dir=<DIR> <MOUNTPOINT>
