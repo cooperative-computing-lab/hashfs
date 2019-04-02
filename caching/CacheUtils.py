@@ -34,7 +34,9 @@ def validateDirectory(dirPath):
         try:
             if not os.path.isdir(dirPath):
                 os.makedirs(dirPath)
-                with open(dirPath+"/a", "w") as f:
+                hasher = hashlib.sha256()
+                hasher.update("{}")
+                with open(dirPath+"/"+hasher.hexdigest(), "w") as f:
                     f.write("{}")
         except OSError as error:
             return -1

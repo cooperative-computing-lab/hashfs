@@ -55,7 +55,8 @@ class HashFS(Fuse):
         Fuse.__init__(self, *args, **kw)
 
         #FIXME set up a default root
-        self.root = 'a'
+
+        self.root = '44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a'
         self.local_cache_dir = '/tmp/mkfs'
         self.fs = HashFS_Core() # this gets overwritten in main()
         # probably want to update this with each change to point to the
@@ -131,9 +132,16 @@ class HashFS(Fuse):
         # return -errno.ENOENT if path doesn't exist, -errno.EINVAL otherwise
 
     def unlink(self, path):
-        raise NotImplementedError
         #TODO delete a file
         # should return -errno.EISDIR if path is a directory
+        nodes_traversed, node = self.fs.get_node_by_path(self.root, path)
+
+        if node.node_type == "directory":
+            print("{} is a directory".format(path))
+            return -errno.EISDIR
+
+        filename = path.split('/')[-1]
+        self.root = self.fs.delete_node_bubble_up(filename, node.node_cksum, nodes_traversed)
 
     def rmdir(self, path):
         #TODO remove an *empty* directory
@@ -194,10 +202,11 @@ class HashFS(Fuse):
         pass
 
     def access(self, path, mode):
-        raise NotImplementedError
         #TODO since we're not enforcing permissions, it's OK to just check
         # for existence and do nothing. If path doesn't exist, should
         # return -errno.ENOENT
+        _, node = self.fs.get_node_by_path(self.root, path)
+        if node is None: return -errno.ENOENT
 
     def chmod(self, path, mode):
         pass
@@ -286,6 +295,7 @@ class HashFS(Fuse):
         #TODO commit any buffered changes to the file
 
     def main(self, *a, **kw):
+        print(self.local_cache_dir)
         return Fuse.main(self, *a, **kw)
 
 
@@ -298,11 +308,11 @@ def main():
                              help="Specify a root hash [default: %default]")
     server.parser.add_option(mountopt="local_cache_dir", metavar="DIR", default='/tmp/mkfs',
                              help="Specify a local cache directory [default: %default]")
-    server.parse(values=server, errex=1)
+    server.parse(values=server, errex=2)
 
     if not os.path.isdir(server.local_cache_dir):
-        print("{} is not a directory")
-        sys.exit()
+        print("Creating local cache directoyr: {}".format(server.local_cache_dir))
+        os.mkdir(server.local_cache_dir)
     if server.local_cache_dir[-1] == '/':
         server.local_cache_dir = server.local_cache_dir[:-1]
     server.fs = HashFS_Core(local_cache_dir=server.local_cache_dir)

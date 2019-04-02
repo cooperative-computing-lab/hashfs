@@ -103,41 +103,6 @@ class HashFS:
             return nodes_traversed, None
 
 
-    """
-    # root_node: cksum of root directories to begin search from
-    # TODO: Check if node is directory when traversing
-    def get_node_by_path(self, root_node, path_list, nodes_traversed = None):
-        if nodes_traversed is None:
-            nodes_traversed = list([('/', root_node)])
-
-        cache_dir = "{}/mkfs".format(tempfile.gettempdir())
-
-        # Open directory_file and traverse
-        dir_content = self.fetch_dir_info_from_cache(root_node)
-
-        sub_node = dir_content.get(path_list[0])
-        if sub_node == None:
-            full_path = "{}".format("/".join([x[0] for x in nodes_traversed[1:]]))
-            print("The path {} doesn't exist".format(full_path))
-            return nodes_traversed, None
-        
-        # If node is found, make sure it's cached locally and return
-        if len(path_list) == 1:
-            if self.load_node_to_cache(sub_node['cksum']) == False:
-                print("The node {} doesn't exist in s3".format(sub_node['cksum']))
-                return nodes_traversed, None
-            return nodes_traversed, self.Node(sub_node['name'], sub_node['cksum'], sub_node['type'])
-        
-        # Check if sub_node is directory
-        if sub_node['type'] == 'directory':
-            nodes_traversed.append((path_list[0], sub_node['cksum']))
-            return self.get_node_by_path(sub_node['cksum'], path_list[1:], nodes_traversed)
-        else:
-            fullpath = "{}".format("/".join([x[0] for x in nodes_traversed[1:]]))
-            print("{} is not a directory".format(fullpath))
-            return nodes_traversed, None
-    """
-
     def put_file_bubble_up(self, src_path, file_name, nodes_traversed):
         """Put file into the file system and bubble up the merkle tree
 
@@ -263,8 +228,6 @@ class HashFS:
 
     # Since every path needs to be absolute path from root, remove leading /
     def clean_path(self, path):
-        #if path[0] != '/':
-        #    return "/{}".format(path)
         if path[0] == '/':
             return path[1:]
         
