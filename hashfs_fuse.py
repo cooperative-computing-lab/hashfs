@@ -54,13 +54,12 @@ class HashFS(Fuse):
     def __init__(self, *args, **kw):
         Fuse.__init__(self, *args, **kw)
 
-        #FIXME set up a default root
-
+        # Default root is empty directory
         self.root = '44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a'
         self.local_cache_dir = '/tmp/mkfs'
         self.fs = HashFS_Core() # this gets overwritten in main()
-        # probably want to update this with each change to point to the
-        # current FS root
+
+        self.opened_write = dict()
 
     def getattr(self, path):
         #TODO fill in missing stat fields
@@ -262,6 +261,20 @@ class HashFS(Fuse):
         for name in all_dirs:
             yield fuse.Direntry(str(name))
 
+    def create(self, path, mode, fi=None):
+        print("CREATING {} in mode {}".format(path, mode))
+        parent_path = '/'.join(path.strip('/').split('/')[:-1])
+        parent_path = '/'+parent_path
+        nodes_traversed, node = self.fs.get_node_by_path(self.root, parent_path)
+
+        nodes_traversed.append((node.node_name, node.node_cksum))
+        # Open a temp file
+        tmp = "{}/temp-{}".format(self.local_cache_dir, path.replace('/', '_'))
+        fd = os.open(tmp, os.O_CREAT | os.O_WRONLY)
+        self.opened_write[path] = (fd, tmp, nodes_traversed)
+        print("kjasdhfjklsdahf---------------{}".format(fd))
+        return 
+        
 
     def open(self, path, flags):
         #TODO get ready to use a file
@@ -269,10 +282,21 @@ class HashFS(Fuse):
         # -errno.ENOENT if it's missing.
         # this call has a lot of variations and edge cases, so don't worry too
         # much about getting things perfect on the first pass.
+        print("Opening {} with flags {}".format(path, flags))
+        if flags == os.O_WRONLY | os.O_TRUNC:
+            parent_path = '/'.join(path.strip('/').split('/')[:-1])
+            parent_path = '/'+parent_path
+            nodes_traversed, node = self.fs.get_node_by_path(self.root, parent_path)
 
-        _, node = self.fs.get_node_by_path(self.root, path)
-        if node is None:
-            return -errno.ENOENT
+            nodes_traversed.append((node.node_name, node.node_cksum))
+            # Open a temp file
+            tmp = "{}/temp-{}".format(self.local_cache_dir, path.replace('/', '_'))
+            fd = os.open(tmp, os.O_CREAT | os.O_WRONLY)
+            self.opened_write[path] = (fd, tmp, nodes_traversed)
+        else:
+            _, node = self.fs.get_node_by_path(self.root, path)
+            if node is None:
+                return -errno.ENOENT
 
     def read(self, path, length, offset):
         _, node = self.fs.get_node_by_path(self.root, path)
@@ -280,19 +304,41 @@ class HashFS(Fuse):
             return -errno.ENOENT
 
         with open('{}/{}'.format(self.local_cache_dir, node.node_cksum), "r") as f:
-            f.seek(offset, 1)
+            f.seek(offset, 0)
             buf = f.read(length)
 
         return buf
 
     def write(self, path, buf, offset):
-        raise NotImplementedError
+        print("WRITE HAS BEEN CALLED-----------")
         #TODO write buf at offset bytes into the file and return the
         # number of bytes written
+        fd = self.opened_write[path][0]
+        os.lseek(fd, offset, os.SEEK_SET)
+        return os.write(fd, buf)
+
 
     def release(self, path, flags):
-        pass
+        print("in release --------")
+        print(self.opened_write)
         #TODO commit any buffered changes to the file
+        # Check if the file has been opened for write, if so, commit the changes
+        if self.opened_write.get(path) != None and os.stat(self.opened_write.get(path)[1]).st_size:
+            fd = self.opened_write[path][0]
+            tmp = self.opened_write[path][1]
+            nodes_traversed = self.opened_write[path][2]
+
+            cksum = self.fs.calculate_file_cksum(tmp)
+            print(cksum)
+            """
+            local_name = "{}/{}".format(self.local_cache_dir, cksum)
+            os.rename(tmp, local_name)
+            self.fs.put_file_to_parent(cksum, local_name)
+            self.root = self.fs.bubble_up_existing_dir(nodes_traversed, path.split('/')[-1], cksum, "file")
+            os.close(fd)
+            del self.opened_write[path]
+            """
+
 
     def main(self, *a, **kw):
         print(self.local_cache_dir)
