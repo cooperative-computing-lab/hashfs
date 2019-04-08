@@ -10,6 +10,8 @@ class HashFS:
         self.parent = CacheLib(parent_node)
         self.local_cache_dir = local_cache_dir
 
+        self.EMPTY_CKSUM = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
     class Node:
         def __init__(self, node_name, node_cksum, node_type):
             self.node_name = node_name
