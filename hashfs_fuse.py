@@ -194,6 +194,7 @@ class HashFS(Fuse):
         nodes_traversed, parent_node = self.fs.get_node_by_path(self.root, parent_path)
 
         if parent_node is None:
+            print("Can't find parent node")
             return -errno.ENOENT
 
         parent_dirinfo = self.fs.fetch_dir_info_from_cache(parent_node.node_cksum)
@@ -292,8 +293,7 @@ class HashFS(Fuse):
         # this call has a lot of variations and edge cases, so don't worry too
         # much about getting things perfect on the first pass.
         
-        # TODO: Check if file is currently empty, if so create tmp file
-        #       else just open the tmp file that's already created
+        # TODO: NEED TO HANDLE MULTIPLE OPEN on the same file
         if (flags & os.O_WRONLY) or (flags & os.O_RDWR):
             nodes_traversed, node = self.fs.get_node_by_path(self.root, path)
             if node is None:
@@ -320,15 +320,14 @@ class HashFS(Fuse):
         return os.read(fh, length)
 
     def write(self, path, buf, offset):
-        #TODO write buf at offset bytes into the file and return the
-        # number of bytes written
         fh = self.opened_files[path].fd
         os.lseek(fh, offset, os.SEEK_SET)
         return os.write(fh, buf)
 
 
     def release(self, path, flags):
-        #TODO commit any buffered changes to the file
+        # TODO: NEED TO HANDLE MULTIPLE OPEN on the same file
+        # TODO commit any buffered changes to the file
         # Check if the file has been opened for write, if so, commit the changes
         open_node = self.opened_files.get(path)
         if open_node:
@@ -346,7 +345,6 @@ class HashFS(Fuse):
 
 
     def main(self, *a, **kw):
-        print(self.local_cache_dir)
         return Fuse.main(self, *a, **kw)
 
 
@@ -362,7 +360,7 @@ def main():
     server.parse(values=server, errex=2)
 
     if not os.path.isdir(server.local_cache_dir):
-        print("Creating local cache directoyr: {}".format(server.local_cache_dir))
+        print("Creating local cache directory: {}".format(server.local_cache_dir))
         os.mkdir(server.local_cache_dir)
     if server.local_cache_dir[-1] == '/':
         server.local_cache_dir = server.local_cache_dir[:-1]
