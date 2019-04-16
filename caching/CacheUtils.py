@@ -37,10 +37,12 @@ def validateDirectory(dirPath):
                 # Create default root directory of an empty directory
                 hasher = hashlib.sha256()
                 hasher.update("{}")
+                print("Creating {}/{}".format(dirPath, hasher.hexdigest()))
                 with open(dirPath+"/"+hasher.hexdigest(), "w") as f:
                     f.write("{}")
                 # Create a node that represent empty files
                 hasher2 = hashlib.sha256()
+                print("Creating {}/{}".format(dirPath, hasher2.hexdigest()))
                 with open(dirPath+'/'+hasher2.hexdigest(), "w") as f:
                     pass
         except OSError as error:

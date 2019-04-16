@@ -4,9 +4,7 @@ import sys
 import json
 import tempfile
 
-def LS(dest_path, root_cksum):
-    fs = HashFS()
-
+def LS(dest_path, root_cksum, fs = HashFS()):
     _, node = fs.get_node_by_path(root_cksum, dest_path)
     if node == None:
         print("The path does't exist")
@@ -18,7 +16,7 @@ def LS(dest_path, root_cksum):
         return
 
     # Open dir_node and list files
-    dir_node_path = "{}/mkfs/{}".format(tempfile.gettempdir(), node.node_cksum)
+    dir_node_path = "{}/{}".format(fs.local_cache_dir, node.node_cksum)
     with open(dir_node_path, "r") as df:
         dir_contents = json.load(df) 
     

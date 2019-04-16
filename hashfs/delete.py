@@ -2,9 +2,7 @@ from __future__ import print_function
 from hashfs_core import HashFS
 import sys
 
-def DELETE(dest_path, root_cksum):
-    fs = HashFS()
-
+def DELETE(dest_path, root_cksum, fs = HashFS()):
     nodes_traversed, node = fs.get_node_by_path(root_cksum, dest_path)
 
     if node.node_cksum is None:

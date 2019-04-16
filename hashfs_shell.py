@@ -1,9 +1,14 @@
+#!/usr/bin/env python
+
 from __future__ import print_function
+from hashfs.hashfs_core import HashFS
 from hashfs.get import GET
 from hashfs.put import PUT
 from hashfs.ls import LS
 from hashfs.mkdir import MKDIR
 from hashfs.delete import DELETE
+
+from optparse import OptionParser
 
 def usage():
     print("Commands:")
@@ -13,11 +18,11 @@ def usage():
     print("    MKDIR    [path]")
     print("    DELETE   [path]")
 
-
-if __name__ == "__main__":
-    root_cksum = raw_input("Enter root checksum: ")
-
-    new_cksums = list([root_cksum])
+def prompt_loop(options):
+    root_cksum = options.root
+    new_cksums = list([options.root])
+    parent = "{}:{}".format(options.host, options.port)
+    fs = HashFS(parent_node=parent, local_cache_dir=options.local_cache, local_run=options.local_run)
 
     command = raw_input("> ")
     while command != "exit":
@@ -28,41 +33,41 @@ if __name__ == "__main__":
         if op == "GET":
             if len(args) != 2:
                 usage()
-                continue
-            GET(args[0], args[1], root_cksum)
+            else:
+                GET(args[0], args[1], root_cksum, fs)
 
         elif op == "PUT":
             if len(args) != 2:
                 usage()
-                continue
-            temp = PUT(args[0], args[1], root_cksum)
-            if temp != "Unsuccessful":
-                root_cksum = temp
-                new_cksums.append(root_cksum)
+            else:
+                temp = PUT(args[0], args[1], root_cksum, fs)
+                if temp != "Unsuccessful":
+                    root_cksum = temp
+                    new_cksums.append(root_cksum)
 
         elif op == "LS":
             if len(args) != 1:
                 usage()
-                continue
-            LS(args[0], root_cksum)
+            else:
+                LS(args[0], root_cksum, fs)
 
         elif op == "MKDIR":
             if len(args) != 1:
                 usage()
-                continue
-            temp = MKDIR(args[0], root_cksum)
-            if temp != "Unsuccessful":
-                root_cksum = temp
-                new_cksums.append(root_cksum)
+            else:
+                temp = MKDIR(args[0], root_cksum, fs)
+                if temp != "Unsuccessful":
+                    root_cksum = temp
+                    new_cksums.append(root_cksum)
 
         elif op == "DELETE":
             if len(args) != 1:
                 usage()
-                continue
-            temp = DELETE(args[0], root_cksum)
-            if temp != "Unsuccessful":
-                root_cksum = temp
-                new_cksums.append(root_cksum)
+            else:
+                temp = DELETE(args[0], root_cksum, fs)
+                if temp != "Unsuccessful":
+                    root_cksum = temp
+                    new_cksums.append(root_cksum)
         elif op == "usage":
             usage()
 
@@ -70,3 +75,26 @@ if __name__ == "__main__":
         command = raw_input("> ")
 
     print("Newest head: {}".format(root_cksum))
+
+
+if __name__ == "__main__":
+    parser = OptionParser()
+    parser.add_option("-r", "--root", dest="root",
+                    help="Root checksum of the filesystem",
+                    default="44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a")
+    parser.add_option("-k", "--host", dest="host",
+                    help="Address of parent node",
+                    default="localhost")
+    parser.add_option("-p", "--port", dest="port",
+                    help="Port to connect to on parent node",
+                    default="9999")
+    parser.add_option("-c", "--local-cache", dest="local_cache",
+                    help="Local cache directory path",
+                    default="/tmp/mkfs")
+    parser.add_option("-l", action="store_true", 
+                    help="Run file system locally, do not put nodes to parent",
+                    dest="local_run", default=False)
+
+
+    (options, args) = parser.parse_args()
+    prompt_loop(options)

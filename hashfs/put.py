@@ -4,8 +4,7 @@ import os
 import sys
 
 # TODO: think about file and directory with the same name
-def PUT(src_path, dest_path, root_cksum):
-    fs = HashFS()
+def PUT(src_path, dest_path, root_cksum, fs = HashFS()):
     # Check if src_path is a local file that exists
     if not os.path.isfile(src_path):
         print("{} is not a valid local path".format(src_path))

@@ -2,9 +2,7 @@ from __future__ import print_function
 from hashfs_core import HashFS
 import sys
 
-def MKDIR(dir_path, root_cksum):
-    fs = HashFS()
-
+def MKDIR(dir_path, root_cksum, fs = HashFS()):
     # Get the node of directory the file is to be placed in
     cont_dirpath = '/'.join(dir_path.strip('/').split('/')[:-1])
     cont_dirpath = '/'+cont_dirpath

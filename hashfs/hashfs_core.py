@@ -2,13 +2,15 @@ from __future__ import print_function
 import os
 import json
 import hashlib
+import shutil
 from caching.CacheLib import CacheLib
 
 class HashFS:
-    def __init__(self, fs = "dummy", parent_node = "localhost:9999", local_cache_dir = "/tmp/mkfs"):
+    def __init__(self, fs = "dummy", parent_node = "localhost:9999", local_cache_dir = "/tmp/mkfs", local_run = False):
         self.fs = fs
         self.parent = CacheLib(parent_node)
         self.local_cache_dir = local_cache_dir
+        self.local_run = local_run
 
         self.EMPTY_CKSUM = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
@@ -39,6 +41,7 @@ class HashFS:
                 print("Cannot create {}".format(self.local_cache_dir))
                 return False
 
+        print(object_name, self.local_cache_dir)
         if self.parent.get(object_name, "sha256", self.local_cache_dir) != 0:
             print("Failed to get file from parent")
             return False
@@ -48,8 +51,9 @@ class HashFS:
     # Put the file in the bucket
     # TODO: May want to add "if file exist" check
     def put_file_to_parent(self, object_name, local_name):
-        cksum = self.parent.put(local_name, "sha256")
-        #self.parent.push(cksum, "sha256")
+        if not self.local_run:
+            cksum = self.parent.put(local_name, "sha256")
+            #self.parent.push(cksum, "sha256")
 
 
     def get_node_by_path(self, root_node, path, nodes_traversed = None):
@@ -69,6 +73,8 @@ class HashFS:
                   has occured
         """
         if path == '/':
+            if self.load_node_to_cache(root_node) == False:
+                print("The node {} doesn't exist in parent".format(root_node))
             return list(), self.Node('/', root_node, 'directory')
 
         if nodes_traversed is None:
@@ -125,6 +131,7 @@ class HashFS:
 
         # Put file named as the cksum
         file_cksum = self.calculate_file_cksum(src_path)
+        shutil.copyfile(src_path, "{}/{}".format(self.local_cache_dir, file_cksum))
         self.put_file_to_parent(file_cksum, src_path)
 
         # Bubble up on existing directories

@@ -5,15 +5,13 @@ import sys
 import shutil
 import tempfile
 
-def GET(src_path, dest_path, root_cksum):
-    fs = HashFS()
+def GET(src_path, dest_path, root_cksum, fs = HashFS()):
     _, node = fs.get_node_by_path(root_cksum, src_path)
 
     if node == None:
         return False
 
-    cache_dir = "{}/mkfs".format(tempfile.gettempdir())
-    shutil.copyfile("{}/{}".format(cache_dir, node.node_cksum), dest_path)
+    shutil.copyfile("{}/{}".format(fs.local_cache_dir, node.node_cksum), dest_path)
 
     return True
 
