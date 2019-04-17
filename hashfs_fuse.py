@@ -67,7 +67,7 @@ class HashFS(Fuse):
         self.opened_files = dict()
 
     class OpenedNode:
-        
+
         def __init__(self, fd, local_name, nodes_traversed, flags):
             self.fd = fd
             self.local_name = local_name
@@ -362,7 +362,6 @@ class HashFS(Fuse):
         self.fs = HashFS_Core(parent_node=parent, local_cache_dir=self.local_cache_dir, local_run=self.local_run)
 
         return Fuse.main(self, *a, **kw)
-
 
 def main():
     server = HashFS(version="%prog " + fuse.__version__,

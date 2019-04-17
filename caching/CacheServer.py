@@ -68,7 +68,7 @@ def get(encryption, filename):
 
     return fileContents
 
-def put(encryption, binaryData):
+def put(encryption, uploaded_files):
     if encryption != "sha256":
         abortAndPrintError(400, "Can only use sha256 as hashing algorithm")
     
@@ -78,18 +78,25 @@ def put(encryption, binaryData):
     except:
         abortAndPrintError(500, "Error accessing Flask config")
 
-    # get hash of file to use as filename
-    filename = CacheUtils.calculate_binary_data_cksum(binaryData)
+    file_names = []
+    for fileStorageObj in uploaded_files:
+        binaryData = fileStorageObj.read()
 
-    # open file and save contents to it
-    try:
-        with open("{}/{}".format(cacheDir, filename), "wb") as f:
-            f.write(binaryData)
-    except IOError as error:
-        abortAndPrintError(500, error)
+        # get hash of file to use as filename
+        filename = CacheUtils.calculate_binary_data_cksum(binaryData)
+
+        # open file and save contents to it
+        try:
+            with open("{}/{}".format(cacheDir, filename), "wb") as f:
+                f.write(binaryData)
+            file_names.append(filename)
+        except IOError as error:
+            # abortAndPrintError(500, error)
+            print "Could not PUT file "+fileStorageObj.filename+", error:"+str(error)
+            file_names.append("NULL")
 
     # return hashed filename
-    return filename
+    return str(file_names)
 
 def push(encryption, filename):
     if encryption != "sha256":
@@ -172,10 +179,10 @@ def getFileEndpoint(encryption, filename):
 @app.route("/put/<encryption>", methods=['PUT'])
 def putFileEndpoint(encryption):
     try:
-        binaryData = request.get_data()
+        uploaded_files = request.files.getlist("file")
     except:
         abortAndPrintError(500, "Error getting data from PUT request")
-    return put(encryption, binaryData)
+    return put(encryption, uploaded_files)
 
 # Push file endpoint
 @app.route("/push/<encryption>/<filename>", methods=['PUT'])
@@ -218,7 +225,7 @@ if __name__ == '__main__':
     if portNum != None and parentAddress != None and cacheDir != None:
         app.config["parentCacheAddress"] = parentAddress
         app.config["cacheDir"] = cacheDir
-        app.run(host="", port=portNum)
+        app.run(host="0.0.0.0", port=portNum)
     else:
         print usageMsg
         sys.exit(-1)
