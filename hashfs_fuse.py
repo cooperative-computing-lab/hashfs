@@ -57,7 +57,7 @@ class HashFS(Fuse):
         #FIXME set up a default root
         self.root = 'a'
         self.local_cache_dir = '/tmp/mkfs'
-        self.fs = HashFS_Core()
+        self.fs = HashFS_Core(local_cache_dir = self.local_cache_dir)
         # probably want to update this with each change to point to the
         # current FS root
 

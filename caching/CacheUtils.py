@@ -52,3 +52,6 @@ def calculate_binary_data_cksum(data):
     hasher = hashlib.sha256()
     hasher.update(data)
     return hasher.hexdigest()
+
+def getDirSize(dir):
+    return sum(os.path.getsize(f) for f in os.listdir(dir) if os.path.isfile(f))
