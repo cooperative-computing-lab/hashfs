@@ -2,7 +2,6 @@ from __future__ import print_function
 import os
 import json
 import hashlib
-import tempfile
 from caching.CacheLib import CacheLib
 
 class HashFS:
@@ -10,6 +9,8 @@ class HashFS:
         self.fs = fs
         self.parent = CacheLib(parent_node)
         self.local_cache_dir = local_cache_dir
+
+        self.EMPTY_CKSUM = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
     class Node:
         def __init__(self, node_name, node_cksum, node_type):
@@ -104,41 +105,6 @@ class HashFS:
             return nodes_traversed, None
 
 
-    """
-    # root_node: cksum of root directories to begin search from
-    # TODO: Check if node is directory when traversing
-    def get_node_by_path(self, root_node, path_list, nodes_traversed = None):
-        if nodes_traversed is None:
-            nodes_traversed = list([('/', root_node)])
-
-        cache_dir = "{}/mkfs".format(tempfile.gettempdir())
-
-        # Open directory_file and traverse
-        dir_content = self.fetch_dir_info_from_cache(root_node)
-
-        sub_node = dir_content.get(path_list[0])
-        if sub_node == None:
-            full_path = "{}".format("/".join([x[0] for x in nodes_traversed[1:]]))
-            print("The path {} doesn't exist".format(full_path))
-            return nodes_traversed, None
-        
-        # If node is found, make sure it's cached locally and return
-        if len(path_list) == 1:
-            if self.load_node_to_cache(sub_node['cksum']) == False:
-                print("The node {} doesn't exist in s3".format(sub_node['cksum']))
-                return nodes_traversed, None
-            return nodes_traversed, self.Node(sub_node['name'], sub_node['cksum'], sub_node['type'])
-        
-        # Check if sub_node is directory
-        if sub_node['type'] == 'directory':
-            nodes_traversed.append((path_list[0], sub_node['cksum']))
-            return self.get_node_by_path(sub_node['cksum'], path_list[1:], nodes_traversed)
-        else:
-            fullpath = "{}".format("/".join([x[0] for x in nodes_traversed[1:]]))
-            print("{} is not a directory".format(fullpath))
-            return nodes_traversed, None
-    """
-
     def put_file_bubble_up(self, src_path, file_name, nodes_traversed):
         """Put file into the file system and bubble up the merkle tree
 
@@ -221,23 +187,19 @@ class HashFS:
 
 
     def load_node_to_cache(self, cksum):
-        cache_dir = "{}/mkfs".format(tempfile.gettempdir())
-        
-        if not os.path.isdir(cache_dir):
-            os.makedirs(cache_dir)
+        if not os.path.isdir(self.local_cache_dir):
+            os.makedirs(self.local_cache_dir)
 
-        if not os.path.exists("{}/{}".format(cache_dir, cksum)) and not self.get_file_from_parent(cksum):
+        if not os.path.exists("{}/{}".format(self.local_cache_dir, cksum)) and not self.get_file_from_parent(cksum):
             return False
 
         return True
 
     def put_dir_info_in_cache(self, cksum, data):
-        cache_dir = "{}/mkfs".format(tempfile.gettempdir())
+        if not os.path.isdir(self.local_cache_dir):
+            os.makedirs(self.local_cache_dir)
 
-        if not os.path.isdir(cache_dir):
-            os.makedirs(cache_dir)
-
-        cache_node_path = "{}/{}".format(cache_dir, cksum)
+        cache_node_path = "{}/{}".format(self.local_cache_dir, cksum)
         with open(cache_node_path, "w+") as df:
             json.dump(data, df)
 
@@ -247,8 +209,7 @@ class HashFS:
         if self.load_node_to_cache(dir_cksum) == False:
             return None
 
-        cache_dir = "{}/mkfs".format(tempfile.gettempdir())
-        with open("{}/{}".format(cache_dir, dir_cksum), "r") as df:
+        with open("{}/{}".format(self.local_cache_dir, dir_cksum), "r") as df:
             data = json.load(df)
 
         return data
@@ -269,8 +230,6 @@ class HashFS:
 
     # Since every path needs to be absolute path from root, remove leading /
     def clean_path(self, path):
-        #if path[0] != '/':
-        #    return "/{}".format(path)
         if path[0] == '/':
             return path[1:]
         

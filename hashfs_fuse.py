@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, sys
+import os, sys, shutil
 import errno
 import stat
 import fcntl
@@ -54,12 +54,24 @@ class HashFS(Fuse):
     def __init__(self, *args, **kw):
         Fuse.__init__(self, *args, **kw)
 
-        #FIXME set up a default root
-        self.root = 'a'
+        # Default root is empty directory
+        self.root = '44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a'
         self.local_cache_dir = '/tmp/mkfs'
-        self.fs = HashFS_Core(local_cache_dir = self.local_cache_dir)
-        # probably want to update this with each change to point to the
-        # current FS root
+        self.fs = HashFS_Core() # this gets overwritten in main()
+
+        # key = path, value = File_Handler
+        self.opened_files = dict()
+
+    class OpenedNode:
+
+        def __init__(self, fd, local_name, nodes_traversed, flags):
+            self.fd = fd
+            self.local_name = local_name
+            self.nodes_traversed = nodes_traversed
+            self.flags = flags
+
+        def __str__(self):
+            return "fd: {}, local_name: {}, flags: {}".format(self.fd, self.local_name, self.flags)
 
     def getattr(self, path):
         #TODO fill in missing stat fields
@@ -131,9 +143,16 @@ class HashFS(Fuse):
         # return -errno.ENOENT if path doesn't exist, -errno.EINVAL otherwise
 
     def unlink(self, path):
-        raise NotImplementedError
         #TODO delete a file
         # should return -errno.EISDIR if path is a directory
+        nodes_traversed, node = self.fs.get_node_by_path(self.root, path)
+
+        if node.node_type == "directory":
+            print("{} is a directory".format(path))
+            return -errno.EISDIR
+
+        filename = path.split('/')[-1]
+        self.root = self.fs.delete_node_bubble_up(filename, node.node_cksum, nodes_traversed)
 
     def rmdir(self, path):
         #TODO remove an *empty* directory
@@ -175,6 +194,7 @@ class HashFS(Fuse):
         nodes_traversed, parent_node = self.fs.get_node_by_path(self.root, parent_path)
 
         if parent_node is None:
+            print("Can't find parent node")
             return -errno.ENOENT
 
         parent_dirinfo = self.fs.fetch_dir_info_from_cache(parent_node.node_cksum)
@@ -194,10 +214,11 @@ class HashFS(Fuse):
         pass
 
     def access(self, path, mode):
-        raise NotImplementedError
         #TODO since we're not enforcing permissions, it's OK to just check
         # for existence and do nothing. If path doesn't exist, should
         # return -errno.ENOENT
+        _, node = self.fs.get_node_by_path(self.root, path)
+        if node is None: return -errno.ENOENT
 
     def chmod(self, path, mode):
         pass
@@ -253,6 +274,17 @@ class HashFS(Fuse):
         for name in all_dirs:
             yield fuse.Direntry(str(name))
 
+    def mknod(self, path, mode, dev):
+        parent_path = '/'.join(path.strip('/').split('/')[:-1])
+        parent_path = '/'+parent_path
+        nodes_traversed, node = self.fs.get_node_by_path(self.root, parent_path)
+        nodes_traversed.append((node.node_name, node.node_cksum))
+
+        # Put empty file into the parent_node directory to "create a file"
+        parent_dirinfo = self.fs.fetch_dir_info_from_cache(node.node_cksum)
+        self.root = self.fs.bubble_up_existing_dir(nodes_traversed, path.split('/')[-1], self.fs.EMPTY_CKSUM, "file")
+        return 
+
 
     def open(self, path, flags):
         #TODO get ready to use a file
@@ -260,34 +292,60 @@ class HashFS(Fuse):
         # -errno.ENOENT if it's missing.
         # this call has a lot of variations and edge cases, so don't worry too
         # much about getting things perfect on the first pass.
+        
+        # TODO: NEED TO HANDLE MULTIPLE OPEN on the same file
+        if (flags & os.O_WRONLY) or (flags & os.O_RDWR):
+            nodes_traversed, node = self.fs.get_node_by_path(self.root, path)
+            if node is None:
+                return -errno.ENOENT
 
-        _, node = self.fs.get_node_by_path(self.root, path)
-        if node is None:
-            return -errno.ENOENT
+            # Open a temp file
+            tmp = "{}/temp{}".format(self.local_cache_dir, path.replace('/', '_'))
+            shutil.copyfile(self.local_cache_dir+'/'+node.node_cksum, tmp)
+            fd = os.open(tmp, flags)
+            self.opened_files[path] = self.OpenedNode(fd, tmp, nodes_traversed, flags)
+        else:
+            _, node = self.fs.get_node_by_path(self.root, path)
+            if node is None:
+                return -errno.ENOENT
+            src = "{}/{}".format(self.local_cache_dir, node.node_cksum)
+            fd = os.open(src, flags)
+            self.opened_files[path] = self.OpenedNode(fd, src, None, flags)
+            
 
     def read(self, path, length, offset):
-        _, node = self.fs.get_node_by_path(self.root, path)
-        if node is None:
-            return -errno.ENOENT
+        fh = self.opened_files[path].fd
+        os.lseek(fh, offset, os.SEEK_SET)
 
-        with open('{}/{}'.format(self.local_cache_dir, node.node_cksum), "r") as f:
-            f.seek(offset, 1)
-            buf = f.read(length)
-
-        return buf
+        return os.read(fh, length)
 
     def write(self, path, buf, offset):
-        raise NotImplementedError
-        #TODO write buf at offset bytes into the file and return the
-        # number of bytes written
+        fh = self.opened_files[path].fd
+        os.lseek(fh, offset, os.SEEK_SET)
+        return os.write(fh, buf)
+
 
     def release(self, path, flags):
-        pass
-        #TODO commit any buffered changes to the file
+        # TODO: NEED TO HANDLE MULTIPLE OPEN on the same file
+        # TODO commit any buffered changes to the file
+        # Check if the file has been opened for write, if so, commit the changes
+        open_node = self.opened_files.get(path)
+        if open_node:
+            # Check if the file has been opened for write
+            if (open_node.flags & os.O_WRONLY ) or (open_node.flags & os.O_RDWR):
+                tmp = open_node.local_name
+                cksum = self.fs.calculate_file_cksum(tmp)
+                local_name = "{}/{}".format(self.local_cache_dir, cksum)
+                os.rename(tmp, local_name)
+                self.fs.put_file_to_parent(cksum, local_name)
+                self.root = self.fs.bubble_up_existing_dir(open_node.nodes_traversed, path.split('/')[-1], cksum, "file")
+
+            os.close(open_node.fd)
+            del self.opened_files[path]
+
 
     def main(self, *a, **kw):
         return Fuse.main(self, *a, **kw)
-
 
 def main():
     server = HashFS(version="%prog " + fuse.__version__,
@@ -298,13 +356,14 @@ def main():
                              help="Specify a root hash [default: %default]")
     server.parser.add_option(mountopt="local_cache_dir", metavar="DIR", default='/tmp/mkfs',
                              help="Specify a local cache directory [default: %default]")
-    server.parse(values=server, errex=1)
-    print(server.local_cache_dir)
+    server.parse(values=server, errex=2)
+
     if not os.path.isdir(server.local_cache_dir):
-        print("{} is not a directory")
-        sys.exit()
+        print("Creating local cache directory: {}".format(server.local_cache_dir))
+        os.mkdir(server.local_cache_dir)
     if server.local_cache_dir[-1] == '/':
         server.local_cache_dir = server.local_cache_dir[:-1]
+    server.fs = HashFS_Core(local_cache_dir=server.local_cache_dir)
 
     server.main()
 
