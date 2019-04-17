@@ -44,17 +44,21 @@ class CacheLib:
 
         return 0
 
-    def put(self, filepath, encryption):
-        # open file to be put
-        try:
-            with open(filepath, "rb") as f:
-                fileContents = f.read()
-        except IOError as error:
-            raise InternalServerError("PUT error: "+str(error))
+    def put(self, filepaths, encryption):
+        if type(filepaths) is not list:
+            filepaths = [filepaths]
+
+        # build files arrays
+        filesArray = []
+        for fpath in filepaths:
+            try:
+                filesArray.append(('file', open(fpath, "rb")))
+            except IOError as error:
+                raise InternalServerError("PUT error: "+str(error))
 
         # make request to cache server
         try:
-            req = requests.put("http://"+self.cacheServerAddress+"/put/"+encryption, data=fileContents)
+            req = requests.put("http://"+self.cacheServerAddress+"/put/"+encryption, files=filesArray)
         except requests.exceptions.RequestException as error:
             raise InternalServerError("Error making PUT request to cache server: "+str(error))
 
@@ -62,9 +66,9 @@ class CacheLib:
         if not req.ok:
             raise InternalServerError("Error putting file in cache server: "+getErrorMessageFromServerResponse(req.text))
 
-        newFilename = req.content
+        newFilenames = req.content
 
-        return str(newFilename)
+        return str(newFilenames)
 
     def push(self, filename, encryption):
         # make request to cache server
