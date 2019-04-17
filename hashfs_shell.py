@@ -80,20 +80,16 @@ def prompt_loop(options):
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-r", "--root", dest="root",
-                    help="Root checksum of the filesystem",
-                    default="44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a")
-    parser.add_option("-k", "--host", dest="host",
-                    help="Address of parent node",
-                    default="localhost")
-    parser.add_option("-p", "--port", dest="port",
-                    help="Port to connect to on parent node",
-                    default="9999")
-    parser.add_option("-c", "--local-cache", dest="local_cache",
-                    help="Local cache directory path",
-                    default="/tmp/mkfs")
-    parser.add_option("-l", action="store_true", 
-                    help="Run file system locally, do not put nodes to parent",
-                    dest="local_run", default=False)
+                    default="44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+                    help="Specify a root hash [default: %default]")
+    parser.add_option("-k", "--host", dest="host", default="localhost",
+                    help="Specify the address of the parent node [default: %default]")
+    parser.add_option("-p", "--port", dest="port", default="9999", 
+                    help="Specify the port to connect to [default: %default]")
+    parser.add_option("-c", "--local-cache", dest="local_cache", default="/tmp/mkfs", 
+                    help="Specify a local cache directory path [default: %default]")
+    parser.add_option("-l", action="store_true", dest="local_run", default=False, 
+                    help="Run file system locally, do not put nodes to parent [default: %default]")
 
 
     (options, args) = parser.parse_args()

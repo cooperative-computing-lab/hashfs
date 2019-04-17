@@ -57,7 +57,11 @@ class HashFS(Fuse):
         # Default root is empty directory
         self.root = '44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a'
         self.local_cache_dir = '/tmp/mkfs'
-        self.fs = HashFS_Core() # this gets overwritten in main()
+        self.port = '9999'
+        self.host = 'localhost'
+        self.local_run = False
+
+        self.fs = None
 
         # key = path, value = File_Handler
         self.opened_files = dict()
@@ -74,6 +78,7 @@ class HashFS(Fuse):
             return "fd: {}, local_name: {}, flags: {}".format(self.fd, self.local_name, self.flags)
 
     def getattr(self, path):
+        print(self.local_cache_dir)
         #TODO fill in missing stat fields
         # the most important ones:
         # - st_ino: can probably be 0 for now, but should be chosen better.
@@ -345,6 +350,17 @@ class HashFS(Fuse):
 
 
     def main(self, *a, **kw):
+
+        if not os.path.isdir(self.local_cache_dir):
+            print("Creating local cache directory: {}".format(self.local_cache_dir))
+            os.mkdir(self.local_cache_dir)
+        
+        if self.local_cache_dir[-1] == '/':
+            self.local_cache_dir = self.local_cache_dir[:-1]
+
+        parent = "{}:{}".format(self.host, self.port)
+        self.fs = HashFS_Core(parent_node=parent, local_cache_dir=self.local_cache_dir, local_run=self.local_run)
+
         return Fuse.main(self, *a, **kw)
 
 
@@ -353,18 +369,18 @@ def main():
                     usage="A FUSE implementation of HashFS." + Fuse.fusage,
                     dash_s_do='setsingle')
 
-    server.parser.add_option(mountopt="root", metavar="HASH", default='a',
+    server.parser.add_option(mountopt="root", metavar='HASH',
+                             default='44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a',
                              help="Specify a root hash [default: %default]")
-    server.parser.add_option(mountopt="local_cache_dir", metavar="DIR", default='/tmp/mkfs',
+    server.parser.add_option(mountopt="host", metavar='HOST', default='localhost',
+                             help="Specify the address of the parent node [default: %default]")
+    server.parser.add_option(mountopt="port", metavar='PORT', default='9999',
+                             help="Specify the port to connect to [default: %default]")
+    server.parser.add_option(mountopt="local_cache_dir", metavar='DIR', default='/tmp/mkfs',
                              help="Specify a local cache directory [default: %default]")
-    server.parse(values=server, errex=2)
-
-    if not os.path.isdir(server.local_cache_dir):
-        print("Creating local cache directory: {}".format(server.local_cache_dir))
-        os.mkdir(server.local_cache_dir)
-    if server.local_cache_dir[-1] == '/':
-        server.local_cache_dir = server.local_cache_dir[:-1]
-    server.fs = HashFS_Core(local_cache_dir=server.local_cache_dir)
+    server.parser.add_option(mountopt="local_run", action="store_true",
+                             help="Run locally, do not put nodes to parent [default: False]")
+    server.parse(values=server, errex=4)
 
     server.main()
 
