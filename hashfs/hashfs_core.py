@@ -52,11 +52,20 @@ class HashFS:
         return True
 
     # Put the file in the bucket
+    # Take a list of tuples in the form of (cksum, path)
     # TODO: May want to add "if file exist" check
-    def put_file_to_parent(self, object_name, local_name):
+    def put_file_to_parent(self, file_tups):
         if not self.local_run:
-            cksum = self.parent.put(local_name, "sha256")
-            #self.parent.push(cksum, "sha256")
+            file_cksums = list()
+            filepaths = list()
+            for file_tup in file_tups:
+                file_cksums.append(file_tup[0])
+                filepaths.append(file_tup[1])
+            cksums = self.parent.put(filepaths, "sha256")
+
+            # Check to make sure all cksums match
+            if len(set(file_cksums)-set(cksums)) != 0:
+                raise Exception('PUT MESSED UP')
 
 
     def get_node_by_path(self, root_node, path, nodes_traversed = None):
@@ -135,7 +144,7 @@ class HashFS:
         # Put file named as the cksum
         file_cksum = self.calculate_file_cksum(src_path)
         shutil.copyfile(src_path, "{}/{}".format(self.local_cache_dir, file_cksum))
-        self.put_file_to_parent(file_cksum, src_path)
+        self.put_file_to_parent([(file_cksum, src_path)])
 
         # Bubble up on existing directories
         curr_cksum = self.bubble_up_existing_dir(nodes_traversed, file_name, file_cksum, "file")
@@ -144,6 +153,7 @@ class HashFS:
 
 
     def bubble_up_existing_dir(self, nodes_traversed, curr_name, curr_cksum, curr_type):
+        new_nodes = list()
         # Bubble up and modify exisiting directories
         for dir_name, existing_dir_cksum in reversed(nodes_traversed):
             data = self.fetch_dir_info_from_cache(existing_dir_cksum)
@@ -165,7 +175,9 @@ class HashFS:
             curr_type = "directory"
             
             cache_node_path = self.put_dir_info_in_cache(curr_cksum, data)
-            self.put_file_to_parent(curr_cksum, cache_node_path)
+            new_nodes.append((curr_cksum, cache_node_path))
+
+        self.put_file_to_parent(new_nodes)
 
         return curr_cksum
 
@@ -179,7 +191,7 @@ class HashFS:
 
         new_cksum = self.calculate_directory_cksum(dir_data)
         cache_node_path = self.put_dir_info_in_cache(new_cksum, dir_data)
-        self.put_file_to_parent(new_cksum, cache_node_path)
+        self.put_file_to_parent([(new_cksum, cache_node_path)])
 
         root_cksum = self.bubble_up_existing_dir(nodes_traversed[:-1], containing_dir[0], new_cksum, "directory")
 
@@ -189,7 +201,7 @@ class HashFS:
         data = {}
         dir_cksum = self.calculate_directory_cksum(data)
         cache_node_path = self.put_dir_info_in_cache(dir_cksum, data)
-        self.put_file_to_parent(dir_cksum, cache_node_path)
+        self.put_file_to_parent([(dir_cksum, cache_node_path)])
 
         root_cksum = self.bubble_up_existing_dir(nodes_traversed, dir_name, dir_cksum, "directory")
 

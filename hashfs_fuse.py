@@ -352,7 +352,7 @@ class HashFS(Fuse):
                 cksum = self.fs.calculate_file_cksum(tmp)
                 local_name = "{}/{}".format(self.local_cache_dir, cksum)
                 os.rename(tmp, local_name)
-                self.fs.put_file_to_parent(cksum, local_name)
+                self.fs.put_file_to_parent([(cksum, local_name)])
                 self.root = self.fs.bubble_up_existing_dir(open_node.nodes_traversed, path.split('/')[-1], cksum, "file")
                 self.update_log()
 
