@@ -1,8 +1,11 @@
 from __future__ import print_function
 import os
+import sys
 import json
 import hashlib
 import shutil
+
+sys.path.insert(0, os.getcwd())
 from caching.CacheLib import CacheLib
 
 class HashFS:
