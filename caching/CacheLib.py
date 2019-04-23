@@ -1,6 +1,7 @@
 import requests
 import json
 import os
+import ast
 import CacheUtils
 from CacheUtils import getErrorMessageFromServerResponse
 
@@ -66,9 +67,9 @@ class CacheLib:
         if not req.ok:
             raise InternalServerError("Error putting file in cache server: "+getErrorMessageFromServerResponse(req.text))
 
-        newFilenames = req.content
+        newFilenames = ast.literal_eval(req.content)
 
-        return str(newFilenames)
+        return newFilenames
 
     def push(self, filename, encryption):
         # make request to cache server

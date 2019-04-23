@@ -60,6 +60,8 @@ class HashFS(Fuse):
         self.port = '9999'
         self.host = 'localhost'
         self.local_run = False
+        self.log_file = '/tmp/mkfs/root_log.txt'
+        self.log_fh = None
 
         self.fs = None
 
@@ -76,6 +78,10 @@ class HashFS(Fuse):
 
         def __str__(self):
             return "fd: {}, local_name: {}, flags: {}".format(self.fd, self.local_name, self.flags)
+
+    def update_log(self):
+        self.log_fh.write(self.root+'\n')
+        self.log_fh.flush()
 
     def getattr(self, path):
         print(self.local_cache_dir)
@@ -158,6 +164,7 @@ class HashFS(Fuse):
 
         filename = path.split('/')[-1]
         self.root = self.fs.delete_node_bubble_up(filename, node.node_cksum, nodes_traversed)
+        self.update_log()
 
     def rmdir(self, path):
         #TODO remove an *empty* directory
@@ -179,6 +186,7 @@ class HashFS(Fuse):
 
         dir_name = path.split('/')[-1]
         self.root = self.fs.delete_node_bubble_up(dir_name, node.node_cksum, nodes_traversed)
+        self.update_log()
 
     def rename(self, src, dst):
         raise NotImplementedError
@@ -209,6 +217,7 @@ class HashFS(Fuse):
         nodes_traversed.append((parent_node.node_name, parent_node.node_cksum))
 
         self.root = self.fs.make_directory(new_dir, nodes_traversed)
+        self.update_log()
 
     def utime(self, path, times):
         # silently ignore
@@ -288,6 +297,7 @@ class HashFS(Fuse):
         # Put empty file into the parent_node directory to "create a file"
         parent_dirinfo = self.fs.fetch_dir_info_from_cache(node.node_cksum)
         self.root = self.fs.bubble_up_existing_dir(nodes_traversed, path.split('/')[-1], self.fs.EMPTY_CKSUM, "file")
+        self.update_log()
         return 
 
 
@@ -342,8 +352,9 @@ class HashFS(Fuse):
                 cksum = self.fs.calculate_file_cksum(tmp)
                 local_name = "{}/{}".format(self.local_cache_dir, cksum)
                 os.rename(tmp, local_name)
-                self.fs.put_file_to_parent(cksum, local_name)
+                self.fs.put_file_to_parent([(cksum, local_name)])
                 self.root = self.fs.bubble_up_existing_dir(open_node.nodes_traversed, path.split('/')[-1], cksum, "file")
+                self.update_log()
 
             os.close(open_node.fd)
             del self.opened_files[path]
@@ -357,6 +368,8 @@ class HashFS(Fuse):
         
         if self.local_cache_dir[-1] == '/':
             self.local_cache_dir = self.local_cache_dir[:-1]
+
+        self.log_fh = open(self.log_file, "a")
 
         parent = "{}:{}".format(self.host, self.port)
         self.fs = HashFS_Core(parent_node=parent, local_cache_dir=self.local_cache_dir, local_run=self.local_run)
@@ -377,6 +390,8 @@ def main():
                              help="Specify the port to connect to [default: %default]")
     server.parser.add_option(mountopt="local_cache_dir", metavar='DIR', default='/tmp/mkfs',
                              help="Specify a local cache directory [default: %default]")
+    server.parser.add_option(mountopt="log_file", metavar='LOG', default='/tmp/mkfs/root_log.txt',
+                             help="Specify a path to log file [default: %default]")
     server.parser.add_option(mountopt="local_run", action="store_true",
                              help="Run locally, do not put nodes to parent [default: False]")
     server.parse(values=server, errex=4)
