@@ -1,0 +1,15 @@
+Regular cp -r: 3.08673191071
+FUSE cp -r: 3.03321313858
+Regular tar -cvzf: 6.32269191742
+FUSE tar -cvzf: 6.36869001389
+Regular ls -lR: 0.0129289627075
+FUSE ls -lR: 0.0307769775391
+Regular rm -r: 0.558633089066
+FUSE rm -r: 0.780555009842
+----------
+Regular - total time: 9.9809858799
+FUSE - total time: 10.2132351398
+
+Average over 5 executions:
+Total time, regular: 	10.00368814
+Total time, FUSE:	10.77155747
