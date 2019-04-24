@@ -43,8 +43,8 @@ def makeRequestToParentCache(encryption, filename):
     return 0
 
 def get(encryption, filename):
-    if encryption != "sha256":
-        abortAndPrintError(400, "Can only use sha256 hashing algorithm\n")
+    if encryption not in CacheUtils.supportedEncryptionAlgs():
+        abortAndPrintError(400, "Unsuported encryption algorithm: "+str(encryption))
 
     # get cache directory
     try:
@@ -70,9 +70,9 @@ def get(encryption, filename):
     return fileContents
 
 def put(encryption, uploaded_files):
-    if encryption != "sha256":
-        abortAndPrintError(400, "Can only use sha256 as hashing algorithm")
-    
+    if encryption not in CacheUtils.supportedEncryptionAlgs():
+        abortAndPrintError(400, "Unsuported encryption algorithm: "+str(encryption))
+
     # get server config variables
     try:
         cacheDir = app.config.get("cacheDir")
@@ -84,7 +84,7 @@ def put(encryption, uploaded_files):
         binaryData = fileStorageObj.read()
 
         # get hash of file to use as filename
-        filename = CacheUtils.calculate_binary_data_cksum(binaryData)
+        filename = CacheUtils.calculate_binary_data_cksum(binaryData, encryption)
 
         # open file and save contents to it
         try:
@@ -100,8 +100,8 @@ def put(encryption, uploaded_files):
     return str(file_names)
 
 def push(encryption, filename):
-    if encryption != "sha256":
-        abortAndPrintError(400, "Can only use sha256 hashing algorithm")
+    if encryption not in CacheUtils.supportedEncryptionAlgs():
+        abortAndPrintError(400, "Unsuported encryption algorithm: "+str(encryption))
 
     # get server config variables
     try:
@@ -134,8 +134,8 @@ def push(encryption, filename):
     return "success\n"
 
 def info(encryption, filename):
-    if encryption != "sha256":
-        abortAndPrintError(400, "Can only use sha256 hashing algorithm")
+    if encryption not in CacheUtils.supportedEncryptionAlgs():
+        abortAndPrintError(400, "Unsuported encryption algorithm: "+str(encryption))
 
     # get server config variables
     try:

@@ -49,16 +49,27 @@ def validateDirectory(dirPath):
             return -1
     return dirPath
 
-def calculate_file_cksum(src_filepath):
-    hasher = hashlib.sha256()
+# ensures CachServer will never allow a PUT with unsuported encryption algorithm
+def supportedEncryptionAlgs():
+    return ["sha256", "md5"]
+
+def getHasher(enc):
+    if enc == "sha256":
+        hasher = hashlib.sha256()
+    elif enc == "md5":
+        hasher = hashlib.md5()
+    return hasher 
+
+def calculate_file_cksum(src_filepath, enc):
+    hasher = getHasher(enc)
     with open(src_filepath, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hasher.update(chunk)
 
     return hasher.hexdigest()
 
-def calculate_binary_data_cksum(data):
-    hasher = hashlib.sha256()
+def calculate_binary_data_cksum(data, enc):
+    hasher = getHasher(enc)
     hasher.update(data)
     return hasher.hexdigest()
 
