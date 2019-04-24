@@ -12,10 +12,24 @@ pip install requests
 
 ```
 2) Run server
+
+First Navigate to the caching directory
 ```
 cd hashfs/caching
-python CacheServer.py --port 9999 --parent-address 0 --dir /tmp/cache
+```
+Making sure a virtual environment is running with the above dependencies installed, you can now spin up a cache server:
+```
+Usage: CacheServer.py [options]
 
+Options:
+  -h, --help            show this help message and exit
+  --port=PORT           Specify a port for the server to run on [default:
+                        9999]
+  --dir=CACHEDIR        Specify a directory to be used as cache directory
+                        [default: /tmp/hashfs]
+  --parent-address=PARENT
+                        Specify the address for a parent server [default:
+                        None]
 ```
 
 ### FUSE Module
