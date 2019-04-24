@@ -1,18 +1,38 @@
 ## HashFS
 
-### Running a Cache Server:
-1) Install dependecies
+### First time setup
+
+First install virtualenv and install all python packages required.
+To install virtual env:
 ```
+cd $HOME
 curl --location --output virtualenv-16.4.0.tar.gz https://github.com/pypa/virtualenv/tarball/16.4.0
 tar xvfz virtualenv-16.4.0.tar.gz
-python pypa-virtualenv-bc1d76d/virtualenv.py flask_virtualenv
-source flask_virtualenv/bin/activate
+python pypa-virtualenv-bc1d76d/virtualenv.py hashfs_virtualenv
+```
+Activate virtualenv and install flask, requests.
+```
+source ~/hashfs_virtualenv/bin/activate
 pip install flask
 pip install requests
-
 ```
-2) Run server
+Install python-fuse
 
+HashFS can be mounted as a file system via FUSE.
+The implementation uses the Python package `fuse-python`,
+which is available through `pip install`.
+Due to dependencies on the host machine's `libfuse` installation,
+Python might have trouble with library search.
+On RHEL7 machines, for example,
+`import fuse` fails searching for `libfuse.so.2`.
+
+The easiest fix is to set `RPATH` when installing.
+```
+pip install --global-option=build_ext --global-option='--rpath=/usr/lib64' fuse-python
+````
+Before running the Cache Server, the HashFS FUSE or shell, make sure to activate the virtualenv before
+
+### Running a Cache Server:
 First Navigate to the caching directory
 ```
 cd hashfs/caching
@@ -33,17 +53,6 @@ Options:
 ```
 
 ### FUSE Module
-HashFS can be mounted as a file system via FUSE.
-The implementation uses the Python package `fuse-python`,
-which is available through `pip install`.
-Due to dependencies on the host machine's `libfuse` installation,
-Python might have trouble with library search.
-On RHEL7 machines, for example,
-`import fuse` fails searching for `libfuse.so.2`.
-The easiest fix is to set `RPATH` when installing.
-
-    pip install --global-option=build_ext --global-option='--rpath=/usr/lib64' fuse-python
-
 To run the FUSE module, make sure there's a caching server running and you've activated
 a virtualenv that has flask, requests and fuse installed
 ``` 
@@ -85,4 +94,26 @@ that has flask, requests, and fuse installed
                             /tmp/mkfs]
       -l                    Run file system locally, do not put nodes to parent
                             [default: False]
+```
+
+### Demo
+1) Starting a cache server to run in the background
+```
+python caching/CacheServer.py --port=9998 --dir=demoCache >> demoCache_log.txt 2>&1 &
+```
+2) Create an empty directory to mount the HasFS FUSE module
+```
+mkdir demoMount
+```
+3) Run a the FUSE module and connect it to the cache server
+```
+python hashfs_fuse.py -s -o port=9998 demoMount
+```
+4) To unmount the file system
+```
+fusermount -u demoMount
+```
+4) Kill the cache server
+```
+ps -ef | grep 'python caching/CacheServer.py --port=9998' | grep -v grep | awk '{print $2}' | xargs kill
 ```
