@@ -7,6 +7,7 @@ from stat import S_ISDIR
 import sys
 import json
 import CacheUtils
+from optparse import OptionParser
 
 app = Flask(__name__)
 
@@ -195,37 +196,20 @@ def infoEndpoint(encryption, filename):
     return info(encryption, filename)
 
 if __name__ == '__main__':
-    # parse -port, -parent_address, -cache_dir
-    usageMsg = "Usage: CacheServer.py --port portNum --dir path [--parent-address address]"
-    portNum = None
-    parentAddress = -1
-    cacheDir = None
+    parser = OptionParser()
+    parser.add_option("--port", dest="port", default="9999",
+                        help="Specify a port for the server to run on [default: %default]")
+    parser.add_option("--dir", dest="cachedir", default="/tmp/hashfs",
+                        help="Specify a directory to be used as cache directory [default: %default]")
+    parser.add_option("--parent-address", dest="parent", default="None",
+                        help="Specify the address for a parent server [default: %default]")
+    (options, args) = parser.parse_args()
 
-    if len(sys.argv) < 4:
-        print usageMsg
+    cacheDir = CacheUtils.validateDirectory(options.cachedir)
+    if cacheDir == -1:
+        print "Error validating directory "+str(options.cachedir)
         sys.exit(-1)
-    else:
-        try:
-            for i in range(len(sys.argv)):
-                arg = sys.argv[i]
-                if arg[0] == "-":
-                    if "port" in arg:
-                        portNum = int(sys.argv[i+1])
-                    elif "parent-address" in arg:
-                        parentAddress = sys.argv[i+1]
-                    elif "dir" in arg:
-                        cacheDir = CacheUtils.validateDirectory(sys.argv[i+1])
-                        if cacheDir == -1:
-                            print usageMsg
-                            sys.exit(-1)
-        except:
-            print usageMsg
-            sys.exit(-1)
 
-    if portNum != None and parentAddress != None and cacheDir != None:
-        app.config["parentCacheAddress"] = parentAddress
-        app.config["cacheDir"] = cacheDir
-        app.run(host="0.0.0.0", port=portNum)
-    else:
-        print usageMsg
-        sys.exit(-1)
+    app.config["parentCacheAddress"] = options.parent
+    app.config["cacheDir"] = cacheDir
+    app.run(host="0.0.0.0", port=options.port)
