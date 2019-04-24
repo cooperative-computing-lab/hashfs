@@ -2,21 +2,22 @@
 
 ### First time setup
 
-- First install virtualenv and install all python packages required.
-- To install virtual env:
+First install virtualenv and install all python packages required.
+To install virtual env:
 ```
 cd $HOME
 curl --location --output virtualenv-16.4.0.tar.gz https://github.com/pypa/virtualenv/tarball/16.4.0
 tar xvfz virtualenv-16.4.0.tar.gz
 python pypa-virtualenv-bc1d76d/virtualenv.py hashfs_virtualenv
 ```
-- Activate virtualenv and install flask, requests.
+Activate virtualenv and install flask, requests.
 ```
 source ~/hashfs_virtualenv/bin/activate
 pip install flask
 pip install requests
 ```
-- Install python-fuse
+Install python-fuse
+
 HashFS can be mounted as a file system via FUSE.
 The implementation uses the Python package `fuse-python`,
 which is available through `pip install`.
@@ -24,10 +25,12 @@ Due to dependencies on the host machine's `libfuse` installation,
 Python might have trouble with library search.
 On RHEL7 machines, for example,
 `import fuse` fails searching for `libfuse.so.2`.
-The easiest fix is to set `RPATH` when installing.
 
-    pip install --global-option=build_ext --global-option='--rpath=/usr/lib64' fuse-python
-- Before running the Cache Server, the HashFS FUSE or shell, make sure to activate the virtualenv before
+The easiest fix is to set `RPATH` when installing.
+```
+pip install --global-option=build_ext --global-option='--rpath=/usr/lib64' fuse-python
+````
+Before running the Cache Server, the HashFS FUSE or shell, make sure to activate the virtualenv before
 
 ### Running a Cache Server:
 First Navigate to the caching directory
