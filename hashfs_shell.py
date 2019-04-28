@@ -22,7 +22,7 @@ def prompt_loop(options):
     root_cksum = options.root
     new_cksums = list([options.root])
     parent = "{}:{}".format(options.host, options.port)
-    fs = HashFS(parent_node=parent, local_cache_dir=options.local_cache, local_run=options.local_run)
+    fs = HashFS(parent_node=parent, local_cache_dir=options.local_cache, local_run=options.local_run, hash_alg=options.hash_alg)
 
     command = raw_input("> ")
     while command != "exit":
@@ -86,6 +86,8 @@ if __name__ == "__main__":
                     help="Specify the address of the parent node [default: %default]")
     parser.add_option("-p", "--port", dest="port", default="9999", 
                     help="Specify the port to connect to [default: %default]")
+    parser.add_option("-a", "--alg", dest="hash_alg", default="sha256", 
+                    help="Specify the hashing algorithm [default: %default]")
     parser.add_option("-c", "--local-cache", dest="local_cache", default="/tmp/mkfs", 
                     help="Specify a local cache directory path [default: %default]")
     parser.add_option("-l", action="store_true", dest="local_run", default=False, 
