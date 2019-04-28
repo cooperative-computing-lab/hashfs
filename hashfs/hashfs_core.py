@@ -9,11 +9,12 @@ sys.path.insert(0, os.getcwd())
 from caching.CacheLib import CacheLib
 
 class HashFS:
-    def __init__(self, fs = "dummy", parent_node = "localhost:9999", local_cache_dir = "/tmp/mkfs", local_run = False):
+    def __init__(self, fs = "dummy", parent_node = "localhost:9999", local_cache_dir = "/tmp/mkfs", local_run = False, hash_alg = "sha256"):
         self.fs = fs
         self.parent = CacheLib(parent_node)
         self.local_cache_dir = local_cache_dir
         self.local_run = local_run
+        self.hash_alg = hash_alg
 
         self.EMPTY_CKSUM = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
@@ -29,7 +30,6 @@ class HashFS:
         """Get file from parent and save file in local_cache_dir
 
         Args:
-            fs          (str): name of the file system instance
             object_name (str): name of the object
 
         Returns:
@@ -61,7 +61,7 @@ class HashFS:
             for file_tup in file_tups:
                 file_cksums.append(file_tup[0])
                 filepaths.append(file_tup[1])
-            cksums = self.parent.put(filepaths, "sha256")
+            cksums = self.parent.put(filepaths, self.hash_alg)
 
             # Check to make sure all cksums match
             if len(set(file_cksums)-set(cksums)) != 0:
@@ -237,13 +237,25 @@ class HashFS:
         return data
             
     def calculate_directory_cksum(self, dir_content):
-        hasher = hashlib.sha256()
+        if self.hash_alg == "sha256":
+            hasher = hashlib.sha256()
+        elif self.hash_alg == "sha1":
+            hasher = hashlib.sha1()
+        elif self.hash_alg == "md5":
+            hasher = hashlib.md5()
+
         hasher.update(json.dumps(dir_content))
         
         return hasher.hexdigest()
 
     def calculate_file_cksum(self, src_filepath):
-        hasher = hashlib.sha256()
+        if self.hash_alg == "sha256":
+            hasher = hashlib.sha256()
+        elif self.hash_alg == "sha1":
+            hasher = hashlib.sha1()
+        elif self.hash_alg == "md5":
+            hasher = hashlib.md5()
+
         with open(src_filepath, "rb") as f:
             for chunk in iter(lambda: f.read(4096), b""):
                 hasher.update(chunk)
