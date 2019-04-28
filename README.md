@@ -30,7 +30,7 @@ The easiest fix is to set `RPATH` when installing.
 ```
 pip install --global-option=build_ext --global-option='--rpath=/usr/lib64' fuse-python
 ````
-Before running the Cache Server, the HashFS FUSE or shell, make sure to activate the virtualenv before
+Before running the Cache Server, the HashFS FUSE module, or the shell, make sure to activate the virtualenv
 
 ### Running a Cache Server:
 First Navigate to the caching directory
@@ -51,6 +51,11 @@ Options:
                         Specify the address for a parent server [default:
                         None]
 ```
+To make requests to a Cache Server running on a different machine, find out the address of the machine the Cache Server is on by running the following command:
+```
+ifconfig | grep inet | head -n 1 | awk '{print $2}'
+```
+This address is the host that should be specific when running the FUSE module.
 
 ### FUSE Module
 To run the FUSE module, make sure there's a caching server running and you've activated

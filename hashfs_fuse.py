@@ -59,6 +59,7 @@ class HashFS(Fuse):
         self.local_cache_dir = '/tmp/mkfs'
         self.port = '9999'
         self.host = 'localhost'
+        self.hash_alg = 'sha256'
         self.local_run = False
         self.log_file = '/tmp/mkfs/root_log.txt'
         self.log_fh = None
@@ -372,7 +373,7 @@ class HashFS(Fuse):
         self.log_fh = open(self.log_file, "a")
 
         parent = "{}:{}".format(self.host, self.port)
-        self.fs = HashFS_Core(parent_node=parent, local_cache_dir=self.local_cache_dir, local_run=self.local_run)
+        self.fs = HashFS_Core(parent_node=parent, local_cache_dir=self.local_cache_dir, local_run=self.local_run, hash_alg=self.hash_alg)
 
         return Fuse.main(self, *a, **kw)
 
@@ -388,6 +389,8 @@ def main():
                              help="Specify the address of the parent node [default: %default]")
     server.parser.add_option(mountopt="port", metavar='PORT', default='9999',
                              help="Specify the port to connect to [default: %default]")
+    server.parser.add_option(mountopt="hash_alg", metavar='HASH', default='sha256',
+                             help="Specify the hashing algorithm to use [default: %default]")
     server.parser.add_option(mountopt="local_cache_dir", metavar='DIR', default='/tmp/mkfs',
                              help="Specify a local cache directory [default: %default]")
     server.parser.add_option(mountopt="log_file", metavar='LOG', default='/tmp/mkfs/root_log.txt',
