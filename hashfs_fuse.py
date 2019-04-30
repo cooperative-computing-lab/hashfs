@@ -54,7 +54,7 @@ class HashFS(Fuse):
     def __init__(self, *args, **kw):
         Fuse.__init__(self, *args, **kw)
 
-        # Default root is empty directory
+        # Default values
         self.root = '44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a'
         self.local_cache_dir = '/tmp/mkfs'
         self.port = '9999'
@@ -66,7 +66,8 @@ class HashFS(Fuse):
 
         self.fs = None
 
-        # key = path, value = File_Handler
+        # Dictionary to keep track of opened_files
+        # key = path, value = OpenedNodes
         self.opened_files = dict()
 
     class OpenedNode:
@@ -108,6 +109,7 @@ class HashFS(Fuse):
         out.st_mtime = 0
         out.st_ctime = 0
 
+        # Special case to handle root path /
         if path == '/':
             out.st_mode = stat.S_IFDIR | 0o600
             out.st_nlink = 2
@@ -122,6 +124,7 @@ class HashFS(Fuse):
             return out
 
         # Get path to the parent directory of the target file/directory
+        # Since metadata of a file/directory is in the parent node
         parent_path = '/'.join(path.strip('/').split('/')[:-1])
         parent_path = '/'+parent_path
         _, parent_node = self.fs.get_node_by_path(self.root, parent_path)
@@ -155,7 +158,7 @@ class HashFS(Fuse):
         # return -errno.ENOENT if path doesn't exist, -errno.EINVAL otherwise
 
     def unlink(self, path):
-        #TODO delete a file
+        # Delete the file to the path
         # should return -errno.EISDIR if path is a directory
         nodes_traversed, node = self.fs.get_node_by_path(self.root, path)
 
@@ -305,6 +308,7 @@ class HashFS(Fuse):
     def open(self, path, flags):
         #TODO get ready to use a file
         # should (sometimes) check for existence of path and return
+        # Open a file and store the file handler in the self.opened_files dictionary
         # -errno.ENOENT if it's missing.
         # this call has a lot of variations and edge cases, so don't worry too
         # much about getting things perfect on the first pass.
@@ -348,6 +352,7 @@ class HashFS(Fuse):
         open_node = self.opened_files.get(path)
         if open_node:
             # Check if the file has been opened for write
+            # If so, need to commit the changes
             if (open_node.flags & os.O_WRONLY ) or (open_node.flags & os.O_RDWR):
                 tmp = open_node.local_name
                 cksum = self.fs.calculate_file_cksum(tmp)
