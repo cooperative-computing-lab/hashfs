@@ -51,13 +51,15 @@ def validateDirectory(dirPath):
 
 # ensures CachServer will never allow a PUT with unsuported encryption algorithm
 def supportedEncryptionAlgs():
-    return ["sha256", "md5"]
+    return ["sha256", "md5", "sha1"]
 
 def getHasher(enc):
     if enc == "sha256":
         hasher = hashlib.sha256()
     elif enc == "md5":
         hasher = hashlib.md5()
+    elif enc == "sha1":
+        hasher = hashlib.sha1()
     return hasher 
 
 def calculate_file_cksum(src_filepath, enc):
