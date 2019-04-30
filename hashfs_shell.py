@@ -2,11 +2,7 @@
 
 from __future__ import print_function
 from hashfs.hashfs_core import HashFS
-from hashfs.get import GET
-from hashfs.put import PUT
-from hashfs.ls import LS
-from hashfs.mkdir import MKDIR
-from hashfs.delete import DELETE
+from hashfs.hashfs_cmd import GET, PUT, LS, MKDIR, DELETE
 
 from optparse import OptionParser
 

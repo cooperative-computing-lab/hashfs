@@ -9,8 +9,29 @@ sys.path.insert(0, os.getcwd())
 from caching.CacheLib import CacheLib
 
 class HashFS:
-    def __init__(self, fs = "dummy", parent_node = "localhost:9999", local_cache_dir = "/tmp/mkfs", local_run = False, hash_alg = "sha256"):
-        self.fs = fs
+    '''
+
+    The HashFS object is a client that allow users to interact with the underlying structure of the
+    HashFS.
+
+    Args:
+        parent_node (str) : The address:host of the parent_node [Default: localhost:9999]
+        local_cache_dir (str) : The local directory to be used as cache directory 
+                                [Default:/tmp/mkfs]
+        local_run (bool) : Whether to run the HashFS locally without putting all changes to
+                            parent_node [Default: False]
+        hash_alg (str) : The hashing algorithm to use [Default: sha256]
+
+    Attributes:
+        parent (CacheLib) : The CacheLib object that allow us to get and put file to parent
+        local_cache_dir (str) : The local directory to be used as cache directory
+        local_run (bool) : Whether to run the HashFS locally without putting all changes to
+                           parent_node
+        hash_alg (str) : The hashing algorithm to use
+
+    '''
+
+    def __init__(self, parent_node = "localhost:9999", local_cache_dir = "/tmp/mkfs", local_run = False, hash_alg = "sha256"):
         self.parent = CacheLib(parent_node)
         self.local_cache_dir = local_cache_dir
         self.local_run = local_run
@@ -19,6 +40,21 @@ class HashFS:
         self.EMPTY_CKSUM = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
     class Node:
+        '''
+
+        The Node structure represent a node in the Merkle Tree
+
+        Args:
+            node_name (str) : The name of the file or directory
+            node_cksum (str) : The cksum of the node
+            node_type (str) : The type of the node (directory, file)
+
+        Attributes:
+            node_name (str) : The name of the file or directory
+            node_cksum (str) : The cksum of the node
+            node_type (str) : The type of the node (directory, file)
+
+        '''
         def __init__(self, node_name, node_cksum, node_type):
             self.node_name = node_name
             self.node_cksum = node_cksum
@@ -27,15 +63,17 @@ class HashFS:
     # Get file from bucket and save file in local_cache_dir
     # Returns True if successful, False if unsuccessful
     def get_file_from_parent(self, object_name):
-        """Get file from parent and save file in local_cache_dir
+        """
+        
+        Get file from parent and save file in self.local_cache_dir
 
         Args:
             object_name (str): name of the object
 
         Returns:
             bool: True for success, False for otherwise
-        """
 
+        """
         # Check if local_cache_dir exists
         if not os.path.isdir(self.local_cache_dir):
             try:
@@ -51,10 +89,21 @@ class HashFS:
 
         return True
 
-    # Put the file in the bucket
-    # Take a list of tuples in the form of (cksum, path)
     # TODO: May want to add "if file exist" check
     def put_file_to_parent(self, file_tups):
+        """
+        
+        Put the file(s) to parent, unless self.local_run is true, then do nothing
+
+        Args:
+            file_tups (list): A list of tuples (cksum, path) of files to be put
+
+        Raises:
+            IOError: If any local path provided doesn't exist
+            InternalServerError: PUT request failed
+            Exception: If there's a collision
+
+        """
         if not self.local_run:
             file_cksums = list()
             filepaths = list()
@@ -69,8 +118,9 @@ class HashFS:
 
 
     def get_node_by_path(self, root_node, path, nodes_traversed = None):
-        """Traverse merkle tree and fetch the node by path
-
+        """
+        
+        Traverse merkle tree and fetch the node by path.
         Starting from the root_node, traverse the merkle tree until the node is found or
         an error has occured
 
@@ -83,6 +133,7 @@ class HashFS:
             list: the list of nodes traversed including root
             Node: Node structure containing the information on the node. None if an error
                   has occured
+
         """
         if path == '/':
             if self.load_node_to_cache(root_node) == False:
@@ -124,7 +175,10 @@ class HashFS:
 
 
     def put_file_bubble_up(self, src_path, file_name, nodes_traversed):
-        """Put file into the file system and bubble up the merkle tree
+        """
+        
+        Put file into the file system and call the function that bubble up the merkle tree to 
+        update ancestor nodes
 
         Args:
             src_path        (str) : source of file to be placed in the file system
@@ -132,7 +186,7 @@ class HashFS:
             nodes_traversed (list): the list to keep track of nodes traversed
 
         Return:
-            str : returns the new root cksum
+            str : returns the new root cksum or "Failed"
         """
         # Check that the new file doesn't collide with existing files/directories
         # in the containing directory
@@ -153,6 +207,21 @@ class HashFS:
 
 
     def bubble_up_existing_dir(self, nodes_traversed, curr_name, curr_cksum, curr_type):
+        """
+        
+        Bubble up the path recursive till reaching root, and updating the nodes along the way
+
+        Args:
+            nodes_traversed (list): the list to keep track of nodes traversed
+            curr_name (str): the name of node being inserted
+            curr_cksum (str): the cksum of node being inserted
+            curr_type (str): the type of node being inserted
+
+
+        Return:
+            str : returns the new root cksum
+
+        """
         new_nodes = list()
         # Bubble up and modify exisiting directories
         for dir_name, existing_dir_cksum in reversed(nodes_traversed):
@@ -182,6 +251,19 @@ class HashFS:
         return curr_cksum
 
     def delete_node_bubble_up(self, delete_name, delete_cksum, nodes_traversed):
+        """
+        
+        Find the directory containing the node to be removed, remove it and call the bubble up
+        function to update all ancestor nodes
+
+        Args:
+            delete_name         (str) : the name of file/directory to delete
+            delete_cksum        (str) : the cksum of file/directory to delete
+            nodes_traversed     (list): the list that keeps track of nodes traversed
+
+        Return:
+            str : returns the new root cksum
+        """
         # Fetch directory containing the node to be removed
         containing_dir = nodes_traversed[-1]
         dir_data = self.fetch_dir_info_from_cache(containing_dir[1])
