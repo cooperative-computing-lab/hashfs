@@ -66,6 +66,9 @@ def prompt_loop(options):
                     new_cksums.append(root_cksum)
         elif op == "usage":
             usage()
+        else:
+            print("Invalid argument")
+            usage()
 
         print("Current head: {}".format(root_cksum))
         command = raw_input("> ")
