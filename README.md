@@ -101,6 +101,17 @@ that has flask, requests, and fuse installed
                             [default: False]
 ```
 
+Within the shell, type usage to see all the commands available or see below:
+```
+Commands:
+    GET      [src_path] [dest_path]
+    PUT      [src_path] [dest_path]
+    LS       [path]
+    MKDIR    [path]
+    DELETE   [path]
+```
+A note of the PUT command, please include the name of the file at the destination.
+
 ### Demo
 1) Starting a cache server to run in the background
 ```
