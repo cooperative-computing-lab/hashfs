@@ -1,5 +1,12 @@
 ## HashFS
 
+HashFS is a filesystem based on Merkle Tree that allow the filesystem to exist in multiple different versions at the same time. This means that users can mount the filesystem at different versions, make their changes and commit them without corrupting the changes that other users are making.
+
+This is achieved using Merkle Tree which is traditionally used in block chain to verify transactions.
+![Alt text](README_imgs/merkle_tree.png)
+
+Each write to the filesystem creates a new root node which is used as the version number. There are two ways that the user can interact with the filesystem, it can be through the HashFS FUSE module or the HashFS Shell. For usage, user can mount the file system or enter the interactive shell and selecting a root checksum, after making changes, the new root checksum can be obtained and passed to other users if they wish to access the same version of the filesystem
+
 #### The Cache Server
 Acting as a cache layer to HashFS is an HTTP server built with Python Flask. Each cache server can have a parent cache server. This way files can be pushed up to their parent, and if a cache server doesn’t have a file that is requested, it can ask its parent for the file. Although it is not currently implemented, in the future, a cache server will be able to have an online data store as a parent cache, such as an S3 bucket. 
 
