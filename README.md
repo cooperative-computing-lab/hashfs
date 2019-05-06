@@ -1,5 +1,10 @@
 ## HashFS
 
+#### The Cache Server
+Acting as a cache layer to HashFS is an HTTP server built with Python Flask. Each cache server can have a parent cache server. This way files can be pushed up to their parent, and if a cache server doesn’t have a file that is requested, it can ask its parent for the file. Although it is not currently implemented, in the future, a cache server will be able to have an online data store as a parent cache, such as an S3 bucket. 
+
+Interfacing with the server is simple. Make a GET request to the server to retrieve a file, and a PUT request to put a file in the cache. Multiple files can be put in the same HTTP request. To help with these operations, there is a caching library called CacheLib. Two additional operations that are supported are push, where you can push a file up to the server’s parent cache, and info, where you can get a JSON file with information about a file in the cache server.
+
 ### First time setup
 
 First install virtualenv and install all python packages required.
