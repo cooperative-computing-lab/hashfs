@@ -12,6 +12,18 @@ from optparse import OptionParser
 app = Flask(__name__)
 
 def makeRequestToParentCache(encryption, filename):
+    """
+        
+        Make a GET request to parent cache server
+
+        Args:
+            encryption  (str): name of encryption algorithm used in the file name
+            filename    (str): name of file to be retrieved from parent cache
+
+        Returns:
+            int: 0 for success, aborts and doesn't return otherwise
+
+    """
     # get server config variables
     try:
         address = app.config.get("parentCacheAddress")
@@ -43,6 +55,18 @@ def makeRequestToParentCache(encryption, filename):
     return 0
 
 def get(encryption, filename):
+    """
+        
+        Get file from cache
+
+        Args:
+            encryption  (str): name of encryption algorithm used in the file name
+            filename    (str): name of file to be retrieved
+
+        Returns:
+            byte array: byte array representation of file contents, aborts if there is an error
+
+    """
     if encryption not in CacheUtils.supportedEncryptionAlgs():
         abortAndPrintError(400, "Unsuported encryption algorithm: "+str(encryption))
 
@@ -70,6 +94,18 @@ def get(encryption, filename):
     return fileContents
 
 def put(encryption, uploaded_files):
+    """
+        
+        Put files in the cache
+
+        Args:
+            encryption      (str): name of encryption algorithm to be used in the file name
+            uploaded_files  (list): list of file storage objects to be put in cache
+
+        Returns:
+            list: list of filenames of the files put in the cache
+
+    """
     if encryption not in CacheUtils.supportedEncryptionAlgs():
         abortAndPrintError(400, "Unsuported encryption algorithm: "+str(encryption))
 
@@ -100,6 +136,18 @@ def put(encryption, uploaded_files):
     return str(file_names)
 
 def push(encryption, filename):
+    """
+        
+        Push a file to the parent cache
+
+        Args:
+            encryption  (str): name of encryption algorithm used in the file name
+            filename    (str): name of file to be pushed
+
+        Returns:
+            str: "success" if push succeeded, aborts otherwise
+
+    """
     if encryption not in CacheUtils.supportedEncryptionAlgs():
         abortAndPrintError(400, "Unsuported encryption algorithm: "+str(encryption))
 
@@ -134,6 +182,18 @@ def push(encryption, filename):
     return "success\n"
 
 def info(encryption, filename):
+    """
+        
+        Retrieve information regarding a file in the cache
+
+        Args:
+            encryption  (str): name of encryption algorithm used in the file name
+            filename    (str): name of file to get information about
+
+        Returns:
+            json: file information in json form, aborts if there was an error
+
+    """
     if encryption not in CacheUtils.supportedEncryptionAlgs():
         abortAndPrintError(400, "Unsuported encryption algorithm: "+str(encryption))
 
@@ -168,15 +228,24 @@ def info(encryption, filename):
     return json.dumps(jsonFileInfo)+"\n"
 
 def abortAndPrintError(statusCode, error):
+    """
+        
+        Print status code and error message, as well as call Flask.abort
+
+        Args:
+            statusCode  (int): HTTP status code to be used in error response
+            error       (str): error message
+
+        """
     print str(error)
     abort(statusCode, str(error))
 
-# Get file endpoint
+# Get file endpoint - GET request
 @app.route("/get/<encryption>/<filename>", methods=['GET'])
 def getFileEndpoint(encryption, filename):
     return get(encryption, filename)
 
-# Put file endpoint
+# Put file endpoint - PUT request
 @app.route("/put/<encryption>", methods=['PUT'])
 def putFileEndpoint(encryption):
     try:
@@ -185,12 +254,12 @@ def putFileEndpoint(encryption):
         abortAndPrintError(500, "Error getting data from PUT request")
     return put(encryption, uploaded_files)
 
-# Push file endpoint
+# Push file endpoint - PUT request
 @app.route("/push/<encryption>/<filename>", methods=['PUT'])
 def pushEndpoint(encryption, filename):
     return push(encryption, filename)
 
-# Info endpoint
+# Info endpoint - GET request
 @app.route("/info/<encryption>/<filename>", methods=['GET'])
 def infoEndpoint(encryption, filename):
     return info(encryption, filename)

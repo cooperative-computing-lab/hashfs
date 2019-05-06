@@ -53,6 +53,7 @@ def validateDirectory(dirPath):
 def supportedEncryptionAlgs():
     return ["sha256", "md5", "sha1"]
 
+# returns a hashlib object corresponding to the algorithm chosen
 def getHasher(enc):
     if enc == "sha256":
         hasher = hashlib.sha256()
@@ -62,6 +63,7 @@ def getHasher(enc):
         hasher = hashlib.sha1()
     return hasher 
 
+# calculate the checksum of a file given the filename and encryption to be used
 def calculate_file_cksum(src_filepath, enc):
     hasher = getHasher(enc)
     with open(src_filepath, "rb") as f:
@@ -70,10 +72,12 @@ def calculate_file_cksum(src_filepath, enc):
 
     return hasher.hexdigest()
 
+# calculate the checksum of a file the file contents and encryption to be used
 def calculate_binary_data_cksum(data, enc):
     hasher = getHasher(enc)
     hasher.update(data)
     return hasher.hexdigest()
 
+# calculate directory size
 def getDirSize(dir):
     return sum(os.path.getsize(f) for f in os.listdir(dir) if os.path.isfile(f))

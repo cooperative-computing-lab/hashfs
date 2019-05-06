@@ -19,7 +19,23 @@ class CacheLib:
         self.cacheServerAddress = address
 
     def get(self, filename, encryption, dirToSave):
-        # make request to cache server
+        """
+        
+        Make request to cache server to get file from cache
+
+        Args:
+            filename    (str): name of file to be retrieved
+            encryption  (str): name of encryption algorithm used in the file name
+            dirToSave   (str): name of directory in which to save the file retrieved from cache server
+
+        Returns:
+            int: 0 if success
+
+        Raises:
+            InternalServerError: if there is an error
+            FileNotFound: if the file is not found in the cache server
+
+        """
         try:
             req = requests.get("http://"+self.cacheServerAddress+"/get/"+encryption+"/"+filename)
         except requests.exceptions.RequestException as error:
@@ -46,6 +62,21 @@ class CacheLib:
         return 0
 
     def put(self, filepaths, encryption):
+        """
+        
+        Make request to cache server to put files in the cache
+
+        Args:
+            filepaths   (list): list of file names to be put in the cache
+            encryption  (str): name of encryption algorithm to be used in the file names
+
+        Returns:
+            list: list of filenames that were successfully put in the cache
+
+        Raises:
+            InternalServerError: if there is an error
+
+        """
         if type(filepaths) is not list:
             filepaths = [filepaths]
 
@@ -72,6 +103,22 @@ class CacheLib:
         return newFilenames
 
     def push(self, filename, encryption):
+        """
+        
+        Make request to cache server to push a file up
+
+        Args:
+            filename    (str): name of file to be pushed up
+            encryption  (str): name of encryption algorithm used in the file name
+
+        Returns:
+            int: 0 if success
+
+        Raises:
+            InternalServerError: if there is an error
+            FileNotFound: if the file is not found in the cache server
+
+        """
         # make request to cache server
         try:
             req = requests.put("http://"+self.cacheServerAddress+"/push/"+encryption+"/"+filename)
@@ -88,6 +135,22 @@ class CacheLib:
         return 0
 
     def info(self, filename, encryption):
+        """
+        
+        Make request to cache server to get information about a file
+
+        Args:
+            filename    (str): name of file to get information about
+            encryption  (str): name of encryption algorithm used in the file name
+
+        Returns:
+            json: file information in json form
+
+        Raises:
+            InternalServerError: if there is an error
+            FileNotFound: if the file is not found in the cache server
+
+        """
         # make request to cache server
         try:
             req = requests.get("http://"+self.cacheServerAddress+"/info/"+encryption+"/"+filename)
