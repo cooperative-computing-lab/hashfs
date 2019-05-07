@@ -1,6 +1,6 @@
 ## HashFS
 
-HashFS is a filesystem based on Merkle Tree that allow the filesystem to exist in multiple different versions at the same time. This means that users can mount the filesystem at different versions, make their changes and commit them without corrupting the changes that other users are making.
+HashFS is a filesystem based on Merkle Tree that allows the filesystem to exist in multiple different versions at the same time. This means that users can mount the filesystem at different versions, make their changes and commit them without corrupting the changes that other users are making.
 
 This is achieved using Merkle Tree which is traditionally used in block chain to verify transactions.
 ![Alt text](README_imgs/merkle_tree.png)
